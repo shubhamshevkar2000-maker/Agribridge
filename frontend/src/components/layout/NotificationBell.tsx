@@ -73,20 +73,18 @@ export function NotificationBell({ userId }: { userId: string }) {
       </AnimatePresence>
 
       <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-secondary/50">
-            <Bell className="w-5 h-5 text-foreground" />
-            <AnimatePresence>
-              {unreadCount > 0 && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-background"
-                />
-              )}
-            </AnimatePresence>
-          </Button>
+        <PopoverTrigger className="relative size-8 inline-flex items-center justify-center rounded-lg hover:bg-secondary/50 border border-transparent cursor-pointer select-none">
+          <Bell className="w-5 h-5 text-foreground" />
+          <AnimatePresence>
+            {unreadCount > 0 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-background"
+              />
+            )}
+          </AnimatePresence>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0 mr-4 mt-2 glass-card border-border/50 shadow-xl rounded-xl overflow-hidden" align="end">
           <div className="flex items-center justify-between p-4 border-b border-border/50 bg-secondary/20">

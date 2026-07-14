@@ -28,13 +28,37 @@ export default function LoginPage() {
     setIsLoading(true);
     setServerError('');
     try {
-      // Stub API Call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Login attempt:', data);
-      // Simulate success for now, in a real scenario we'd push to the correct dashboard
-      window.location.href = '/dashboard';
-    } catch (error) {
-      setServerError('Invalid credentials. Please try again.');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const resData = await response.json();
+
+      if (!response.ok || !resData.success) {
+        throw new Error(resData.message || 'Invalid credentials');
+      }
+
+      // Store auth details
+      localStorage.setItem('token', resData.data.token);
+      localStorage.setItem('user_role', resData.data.role);
+      localStorage.setItem('user_name', resData.data.name);
+
+      // Redirect to correct dashboard
+      const roleRedirects: Record<string, string> = {
+        farmer: '/farmer',
+        buyer: '/buyer',
+        logistics: '/logistics',
+        bank: '/bank',
+        admin: '/admin',
+      };
+
+      window.location.href = roleRedirects[resData.data.role] || '/farmer';
+    } catch (error: any) {
+      setServerError(error.message || 'Invalid credentials. Please try again.');
     } finally {
       setIsLoading(false);
     }

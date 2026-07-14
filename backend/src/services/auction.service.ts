@@ -57,8 +57,8 @@ export const completeAuction = async (auctionId: string) => {
 
   if (highestBidStr && highestBidderStr) {
     auction.currentHighestBid = parseInt(highestBidStr, 10);
-    auction.highestBidder = new Types.ObjectId(highestBidderStr) as any;
-    auction.status = 'completed';
+    auction.winnerId = new Types.ObjectId(highestBidderStr) as any;
+    auction.status = 'closed';
     await auction.save();
 
     // Notify Winner

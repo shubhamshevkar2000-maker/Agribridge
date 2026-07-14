@@ -38,7 +38,7 @@ const cropSchema = new Schema<ICrop>(
       default: 'listed',
     },
     location: {
-      type: { type: String, enum: ['Point'], default: 'Point' },
+      type: { type: String, enum: ['Point'] },
       coordinates: { type: [Number] },
     },
   },

@@ -13,14 +13,39 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-// Mock Stops
-const stops = [
-  { id: 1, type: 'pickup', title: 'Pickup: Farm A', location: 'Nashik, MH', time: '10:00 AM', completed: true },
-  { id: 2, type: 'pickup', title: 'Pickup: Farm B', location: 'Ozar, MH', time: '11:30 AM', completed: false, current: true },
-  { id: 3, type: 'dropoff', title: 'Dropoff: AgroFoods Ltd.', location: 'Mumbai, MH', time: '4:00 PM', completed: false },
-];
+import { useState, useEffect } from 'react';
+
+// Mock Stops fallback, now handled via state
+// const stops = [];
 
 export default function LogisticsDashboard() {
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const token = localStorage.getItem('agribridge_token');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/dashboard/logistics`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const json = await res.json();
+        if (json.success) {
+          setDashboardData(json.data);
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, []);
+
+  const stops = dashboardData?.recentDeliveries || [];
+
   return (
     <div className="flex flex-col lg:flex-row gap-8 max-w-[1600px] mx-auto h-[calc(100vh-8rem)]">
       
@@ -46,39 +71,49 @@ export default function LogisticsDashboard() {
 
             <div className="relative pl-6 space-y-8 before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
               
-              {stops.map((stop) => (
-                <div key={stop.id} className="relative z-10 flex gap-4">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 mt-0.5 ${
-                    stop.completed 
-                      ? 'bg-primary border-primary text-white' 
-                      : stop.current 
-                        ? 'bg-background border-blue-500 text-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' 
-                        : 'bg-background border-border text-muted-foreground'
-                  }`}>
-                    {stop.completed ? <CheckCircle className="w-3 h-3" /> : <div className="w-2 h-2 rounded-full bg-current" />}
-                  </div>
-                  
-                  <div className={`flex flex-col flex-1 p-4 rounded-xl border ${stop.current ? 'bg-blue-500/5 border-blue-500/30' : 'bg-background border-border/50'}`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div className={`font-semibold ${stop.completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                        {stop.title}
+              {isLoading ? (
+                <div className="text-center text-muted-foreground py-8">Loading itinerary...</div>
+              ) : stops.length > 0 ? (
+                stops.map((stop: any) => (
+                  <div key={stop.id} className="relative z-10 flex gap-4">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 mt-0.5 ${
+                      stop.completed 
+                        ? 'bg-primary border-primary text-white' 
+                        : stop.current 
+                          ? 'bg-background border-blue-500 text-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' 
+                          : 'bg-background border-border text-muted-foreground'
+                    }`}>
+                      {stop.completed ? <CheckCircle className="w-3 h-3" /> : <div className="w-2 h-2 rounded-full bg-current" />}
+                    </div>
+                    
+                    <div className={`flex flex-col flex-1 p-4 rounded-xl border ${stop.current ? 'bg-blue-500/5 border-blue-500/30' : 'bg-background border-border/50'}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <div className={`font-semibold ${stop.completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                          {stop.title}
+                        </div>
+                        <Badge variant="outline" className={stop.type === 'pickup' ? 'text-orange-500 border-orange-500/30' : 'text-green-500 border-green-500/30'}>
+                          {stop.type.toUpperCase()}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className={stop.type === 'pickup' ? 'text-orange-500 border-orange-500/30' : 'text-green-500 border-green-500/30'}>
-                        {stop.type.toUpperCase()}
-                      </Badge>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                        <MapPin className="w-3 h-3" /> {stop.location}
+                        <Clock className="w-3 h-3 ml-2" /> {stop.time}
+                      </div>
+                      {stop.current && (
+                        <Button size="sm" className="w-full bg-blue-500 hover:bg-blue-600 text-white mt-2">
+                          Mark Arrived
+                        </Button>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                      <MapPin className="w-3 h-3" /> {stop.location}
-                      <Clock className="w-3 h-3 ml-2" /> {stop.time}
-                    </div>
-                    {stop.current && (
-                      <Button size="sm" className="w-full bg-blue-500 hover:bg-blue-600 text-white mt-2">
-                        Mark Arrived
-                      </Button>
-                    )}
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-12 px-4 rounded-xl border border-dashed border-border/50 bg-secondary/20">
+                  <Navigation className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                  <h3 className="text-lg font-heading font-semibold mb-1">No Active Deliveries</h3>
+                  <p className="text-sm text-muted-foreground mb-4">You have no upcoming stops in your itinerary.</p>
                 </div>
-              ))}
+              )}
 
             </div>
           </CardContent>

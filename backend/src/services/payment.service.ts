@@ -32,15 +32,11 @@ export const processPaymentMock = async (
 
   const transaction = await Transaction.create({
     payerId: userId,
-    // For MVP, we assume platform is receiver for escrow
-    receiverId: userId, 
+    payeeId: userId, 
     amount: amount,
-    type: 'payment',
-    status: 'completed',
-    paymentMethod: 'upi', // Defaulting to UPI for mock
-    paymentGatewayRef: rzpPaymentId,
-    relatedOrderId,
-    relatedAuctionId
+    mode: 'upi',
+    status: 'success',
+    orderId: relatedOrderId
   });
 
   if (relatedOrderId) {

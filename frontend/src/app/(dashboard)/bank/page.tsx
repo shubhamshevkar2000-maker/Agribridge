@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FileText, 
@@ -17,20 +17,37 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
-// Mock Applications
-const mockApplications = [
-  { id: 'LN-1002', farmer: 'Suresh Patel', amount: 500000, purpose: 'Tractor Purchase', score: 850, risk: 'Low', status: 'pending' },
-  { id: 'LN-1005', farmer: 'Vijay Singh', amount: 120000, purpose: 'Fertilizers & Seeds', score: 720, risk: 'Medium', status: 'pending' },
-  { id: 'LN-1008', farmer: 'Kisan Mitra', amount: 800000, purpose: 'Drip Irrigation Setup', score: 540, risk: 'High', status: 'pending' },
-];
-
 export default function BankDashboard() {
-  const [applications, setApplications] = useState(mockApplications);
-  const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [selectedApp, setSelectedApp] = useState<any | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const token = localStorage.getItem('agribridge_token');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/dashboard/bank`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const json = await res.json();
+        if (json.success) {
+          setDashboardData(json.data);
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, []);
 
   const handleAction = async (status: 'approved' | 'rejected') => {
+    if (!selectedApp) return;
     setIsProcessing(true);
     await new Promise(r => setTimeout(r, 1000));
     setApplications(apps => apps.map(app => app.id === selectedApp.id ? { ...app, status } : app));
@@ -44,10 +61,10 @@ export default function BankDashboard() {
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { title: 'Total Disbursed', value: '₹4.2 Cr', icon: IndianRupee },
-          { title: 'Active Loans', value: '1,250', icon: FileText },
-          { title: 'Avg. Trust Score', value: '780', icon: ShieldCheck },
-          { title: 'Recovery Rate', value: '98.5%', icon: TrendingUp },
+          { title: 'Total Disbursed', value: `₹${dashboardData?.totalDisbursed?.toLocaleString() || 0}`, icon: IndianRupee },
+          { title: 'Active Loans', value: dashboardData?.activeLoansCount?.toString() || '0', icon: FileText },
+          { title: 'Avg. Trust Score', value: 'N/A', icon: ShieldCheck },
+          { title: 'Recovery Rate', value: '100%', icon: TrendingUp },
         ].map((kpi, i) => (
           <motion.div key={kpi.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.1 }}>
             <Card className="glass-card border-border/50">
@@ -83,45 +100,56 @@ export default function BankDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {applications.map((app) => (
-                  <TableRow key={app.id}>
-                    <TableCell className="font-medium">{app.id}</TableCell>
-                    <TableCell>{app.farmer}</TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-primary">₹{app.amount.toLocaleString()}</div>
-                      <div className="text-xs text-muted-foreground">{app.purpose}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold">{app.score}</span>
-                        <Badge variant="outline" className={
-                          app.risk === 'Low' ? 'text-green-500 border-green-500/30 bg-green-500/5' : 
-                          app.risk === 'High' ? 'text-destructive border-destructive/30 bg-destructive/5' : 
-                          'text-orange-500 border-orange-500/30 bg-orange-500/5'
-                        }>
-                          {app.risk} Risk
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading applications...</TableCell>
+                  </TableRow>
+                ) : dashboardData?.recentApplications?.length > 0 ? (
+                  dashboardData.recentApplications.map((app: any) => (
+                    <TableRow key={app._id}>
+                      <TableCell className="font-medium">{app._id.substring(0, 8)}</TableCell>
+                      <TableCell>{app.farmerId || 'Unknown'}</TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-primary">₹{app.amount.toLocaleString()}</div>
+                        <div className="text-xs text-muted-foreground">{app.purpose || 'Agricultural'}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">{app.score || 300}</span>
+                          <Badge variant="outline" className={
+                            app.risk === 'Low' ? 'text-green-500 border-green-500/30 bg-green-500/5' : 
+                            app.risk === 'High' ? 'text-destructive border-destructive/30 bg-destructive/5' : 
+                            'text-orange-500 border-orange-500/30 bg-orange-500/5'
+                          }>
+                            {app.risk || 'Medium'} Risk
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="uppercase text-xs tracking-wider">
+                          {app.status}
                         </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={
-                        app.status === 'approved' ? 'bg-green-500' :
-                        app.status === 'rejected' ? 'bg-destructive' : 'bg-secondary text-foreground'
-                      }>
-                        {app.status.toUpperCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {app.status === 'pending' ? (
-                        <Button size="sm" variant="outline" className="glass" onClick={() => { setSelectedApp(app); setIsDialogOpen(true); }}>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => { setSelectedApp(app); setIsDialogOpen(true); }}
+                          disabled={app.status !== 'pending'}
+                        >
                           <Eye className="w-4 h-4 mr-1" /> Review
                         </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Processed</span>
-                      )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>No pending loan applications.</p>
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>

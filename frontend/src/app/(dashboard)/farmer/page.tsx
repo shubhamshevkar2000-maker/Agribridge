@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   IndianRupee, 
@@ -33,6 +33,51 @@ const kpis = [
 export default function FarmerDashboard() {
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [weatherData, setWeatherData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isWeatherLoading, setIsWeatherLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const token = localStorage.getItem('agribridge_token');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/dashboard/farmer`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const json = await res.json();
+        if (json.success) {
+          setDashboardData(json.data);
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const fetchWeather = async () => {
+      try {
+        const token = localStorage.getItem('agribridge_token');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/weather/farmer`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const json = await res.json();
+        setWeatherData(json);
+      } catch (err) {
+        console.error("Error fetching weather data:", err);
+      } finally {
+        setIsWeatherLoading(false);
+      }
+    };
+
+    fetchDashboard();
+    fetchWeather();
+  }, []);
 
   const handleSuggestPrice = async () => {
     setIsAiLoading(true);
@@ -41,12 +86,24 @@ export default function FarmerDashboard() {
     setIsAiLoading(false);
   };
 
+  const dynamicKpis = dashboardData ? [
+    { title: "Total Revenue", value: `₹${dashboardData.revenue.toLocaleString()}`, icon: IndianRupee, trend: dashboardData.revenue > 0 ? "+12%" : "New", trendUp: true },
+    { title: "Active Auctions", value: dashboardData.activeAuctionsCount.toString(), icon: Gavel, trend: "Live", trendUp: true },
+    { title: "Trust Score", value: dashboardData.trustScore.toString(), icon: ShieldCheck, trend: dashboardData.trustScore >= 800 ? "Excellent" : "Good", trendUp: true },
+    { title: "Credit Score", value: dashboardData.creditScore.toString(), icon: TrendingUp, trend: "Base", trendUp: true },
+  ] : [
+    { title: "Total Revenue", value: "₹0", icon: IndianRupee, trend: "Loading", trendUp: true },
+    { title: "Active Auctions", value: "0", icon: Gavel, trend: "Loading", trendUp: true },
+    { title: "Trust Score", value: "...", icon: ShieldCheck, trend: "Loading", trendUp: true },
+    { title: "Credit Score", value: "...", icon: TrendingUp, trend: "Loading", trendUp: true },
+  ];
+
   return (
     <div className="flex flex-col gap-8 max-w-7xl mx-auto">
       
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpis.map((kpi, i) => (
+        {dynamicKpis.map((kpi, i) => (
           <motion.div
             key={kpi.title}
             initial={{ opacity: 0, y: 20 }}
@@ -79,32 +136,46 @@ export default function FarmerDashboard() {
             <CardHeader>
               <CardTitle className="font-heading text-xl flex items-center justify-between">
                 Live Auctions
-                <Badge variant="destructive" className="animate-pulse">1 LIVE</Badge>
+                <Badge variant={dashboardData?.activeAuctionsCount > 0 ? "destructive" : "secondary"} className={dashboardData?.activeAuctionsCount > 0 ? "animate-pulse" : ""}>
+                  {dashboardData?.activeAuctionsCount || 0} LIVE
+                </Badge>
               </CardTitle>
               <CardDescription>Monitor your ongoing crop auctions.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-6 p-4 rounded-xl border border-primary/20 bg-primary/5">
-                <div className="w-full sm:w-32 h-32 bg-secondary rounded-lg object-cover overflow-hidden relative">
-                  <img src="https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=300&q=80" alt="Tomatoes" className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-heading font-bold text-lg">Premium Grade Tomatoes</h3>
-                    <p className="text-sm text-muted-foreground">50 Quintals • Organic</p>
-                  </div>
-                  <div className="mt-4 flex items-end justify-between">
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Current Highest Bid</div>
-                      <div className="text-2xl font-bold text-primary">₹2,350<span className="text-sm font-normal">/qtl</span></div>
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading auctions...</div>
+              ) : dashboardData?.liveAuctions?.length > 0 ? (
+                dashboardData.liveAuctions.map((auction: any) => (
+                  <div key={auction._id} className="flex flex-col sm:flex-row gap-6 p-4 rounded-xl border border-primary/20 bg-primary/5 mb-4">
+                    <div className="w-full sm:w-32 h-32 bg-secondary rounded-lg object-cover overflow-hidden relative">
+                      <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">No Image</div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs text-destructive font-semibold mb-1">00:45:12 Left</div>
-                      <Button size="sm" className="bg-primary-gradient">View Live <ArrowRight className="w-4 h-4 ml-1" /></Button>
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        <h3 className="font-heading font-bold text-lg">{auction.cropId || "Listed Crop"}</h3>
+                        <p className="text-sm text-muted-foreground">Quantity: {auction.quantity} • Organic: {auction.organic ? 'Yes' : 'No'}</p>
+                      </div>
+                      <div className="mt-4 flex items-end justify-between">
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Current Highest Bid</div>
+                          <div className="text-2xl font-bold text-primary">₹{auction.currentHighestBid}<span className="text-sm font-normal">/qtl</span></div>
+                        </div>
+                        <div className="text-right">
+                          <Button size="sm" className="bg-primary-gradient">View Live <ArrowRight className="w-4 h-4 ml-1" /></Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-12 px-4 rounded-xl border border-dashed border-border/50 bg-secondary/20">
+                  <Gavel className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                  <h3 className="text-lg font-heading font-semibold mb-1">No Active Auctions</h3>
+                  <p className="text-sm text-muted-foreground mb-4">You haven't listed any crops for auction yet.</p>
+                  <Button variant="outline">List a Crop</Button>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -119,13 +190,28 @@ export default function FarmerDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-3xl font-heading font-bold">28°C</div>
-                <div className="text-sm font-medium text-blue-600 dark:text-blue-400">80% Rain Chance</div>
-              </div>
-              <div className="p-3 bg-background/50 rounded-lg text-sm border border-border/50 text-foreground">
-                <strong>AI Alert:</strong> Heavy rain expected in your district within 48 hours. Consider harvesting ripe crops early.
-              </div>
+              {isWeatherLoading ? (
+                <div className="text-center py-4 text-muted-foreground text-sm">Loading weather...</div>
+              ) : weatherData?.success ? (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-3xl font-heading font-bold">{Math.round(weatherData.data.current.temp)}°C</div>
+                    <div className="text-sm font-medium text-blue-600 dark:text-blue-400 capitalize">{weatherData.data.current.description}</div>
+                  </div>
+                  <div className="p-3 bg-background/50 rounded-lg text-sm border border-border/50 text-foreground">
+                    <strong>5-Day Forecast:</strong> {weatherData.data.forecast.length} days of data available. {weatherData.data.forecast[0].rainChance > 50 ? 'High chance of rain coming up.' : 'Clear skies expected.'}
+                  </div>
+                </>
+              ) : weatherData?.code === 'NO_LOCATION' ? (
+                <div className="text-center py-2">
+                  <p className="text-sm text-muted-foreground mb-2">Location not set.</p>
+                  <Button size="sm" variant="outline">Update Profile</Button>
+                </div>
+              ) : (
+                <div className="text-center py-2">
+                  <p className="text-sm text-muted-foreground">Weather unavailable (API Key needed)</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

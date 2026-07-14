@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, TrendingUp, AlertCircle, CheckCircle, Gavel, ArrowLeft } from 'lucide-react';
+import { Clock, TrendingUp, CheckCircle, Gavel, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,23 +20,61 @@ interface Bid {
 
 export default function LiveAuctionPage({ params }: { params: { id: string } }) {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [highestBid, setHighestBid] = useState(2350);
+  const [auction, setAuction] = useState<any>(null);
+  const [highestBid, setHighestBid] = useState(0);
   const [bidAmount, setBidAmount] = useState('');
   const [bidFeed, setBidFeed] = useState<Bid[]>([]);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(0);
   const [status, setStatus] = useState<'live' | 'ended'>('live');
-  const feedRef = useRef<HTMLDivElement>(null);
-  const currentUserId = 'buyer-123'; // Mock
+  const [currentUserId, setCurrentUserId] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initial mock bids
-    setBidFeed([
-      { id: '1', amount: 2350, bidder: 'AgroFoods Ltd.', timestamp: new Date().toISOString(), isCurrentUser: false },
-      { id: '2', amount: 2300, bidder: 'FreshMart', timestamp: new Date(Date.now() - 5000).toISOString(), isCurrentUser: false },
-    ]);
+    const fetchAuction = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setCurrentUserId(payload.id);
+        }
+
+        const res = await fetch(`http://localhost:5000/api/auctions/${params.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          setAuction(data.data);
+          setHighestBid(data.data.currentHighestBid || data.data.startingBid);
+          setStatus(data.data.status === 'live' ? 'live' : 'ended');
+          
+          // Calculate time left
+          const end = new Date(data.data.endTime).getTime();
+          const now = Date.now();
+          setTimeLeft(Math.max(0, Math.floor((end - now) / 1000)));
+
+          // Initial bids (populate from history)
+          if (data.data.bids) {
+            const history = data.data.bids.map((b: any) => ({
+              id: b._id || Math.random().toString(),
+              amount: b.amount,
+              bidder: b.bidderId === currentUserId ? 'You' : 'Buyer',
+              timestamp: b.timestamp,
+              isCurrentUser: b.bidderId === currentUserId
+            })).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            setBidFeed(history);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch auction', err);
+      }
+      setLoading(false);
+    };
+
+    fetchAuction();
 
     // Connect to WebSocket
-    const newSocket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
+    const newSocket = io('http://localhost:5000');
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -44,45 +82,58 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
     });
 
     newSocket.on('auction:update', (data) => {
-      setHighestBid(data.highestBid);
-      const newBid: Bid = {
-        id: Math.random().toString(36).substring(7),
-        amount: data.highestBid,
-        bidder: data.highestBidder === currentUserId ? 'You' : 'Anonymous Buyer',
-        timestamp: data.timestamp,
-        isCurrentUser: data.highestBidder === currentUserId
-      };
-      setBidFeed(prev => [newBid, ...prev]);
+      if (data.auctionId === params.id) {
+        setHighestBid(data.highestBid);
+        setBidFeed(prev => {
+          const newBid: Bid = {
+            id: Math.random().toString(36).substring(7),
+            amount: data.highestBid,
+            bidder: data.highestBidder === currentUserId ? 'You' : 'Buyer',
+            timestamp: data.timestamp,
+            isCurrentUser: data.highestBidder === currentUserId
+          };
+          return [newBid, ...prev];
+        });
+      }
+    });
+
+    newSocket.on('auction:error', (err) => {
+      alert(`Bid Error: ${err.message}`);
     });
     
     newSocket.on('auction:completed', (data) => {
-      setStatus('ended');
-      setHighestBid(data.amount);
+      if (data.auctionId === params.id) {
+        setStatus('ended');
+        setHighestBid(data.amount);
+        setTimeLeft(0);
+      }
     });
-
-    // Timer
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setStatus('ended');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
 
     return () => {
       newSocket.close();
-      clearInterval(timer);
     };
-  }, [params.id]);
+  }, [params.id, currentUserId]);
+
+  useEffect(() => {
+    if (status === 'live' && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0; // The server will emit 'auction:completed' via a cron or similar, but we stop the UI timer here.
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [status, timeLeft]);
 
   const placeBid = () => {
     const val = parseInt(bidAmount);
     if (!val || val <= highestBid) return;
     
-    if (socket) {
+    if (socket && currentUserId) {
       socket.emit('auction:bid', {
         auctionId: params.id,
         amount: val,
@@ -98,6 +149,9 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  if (loading) return <div className="p-8 text-center">Loading auction...</div>;
+  if (!auction) return <div className="p-8 text-center text-destructive">Auction not found</div>;
+
   return (
     <div className="max-w-6xl mx-auto h-[calc(100vh-8rem)] flex flex-col gap-6">
       
@@ -105,7 +159,7 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
         <Link href="/buyer/auctions" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Auctions
         </Link>
-        {status === 'live' ? (
+        {status === 'live' && timeLeft > 0 ? (
           <Badge variant="destructive" className="animate-pulse bg-destructive px-3 py-1">LIVE AUCTION</Badge>
         ) : (
           <Badge className="bg-primary px-3 py-1">AUCTION ENDED</Badge>
@@ -120,20 +174,20 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
           <Card className="glass-card border-border/50">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-6">
-                <div className="w-full sm:w-48 h-48 rounded-xl overflow-hidden shrink-0">
-                  <img src="https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&q=80" alt="Tomatoes" className="w-full h-full object-cover" />
+                <div className="w-full sm:w-48 h-48 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                  <span className="text-4xl text-muted-foreground/30 font-bold uppercase">{auction.cropId?.category}</span>
                 </div>
                 <div className="flex flex-col flex-1">
-                  <h1 className="text-2xl font-heading font-bold">Premium Red Tomatoes</h1>
-                  <p className="text-muted-foreground mb-4">50 Quintals • Nashik, MH • Ramesh Kumar</p>
+                  <h1 className="text-2xl font-heading font-bold">{auction.cropId?.name}</h1>
+                  <p className="text-muted-foreground mb-4">{auction.cropId?.quantity} {auction.cropId?.unit} • Farmer: {auction.farmerId?.name}</p>
                   
                   <div className="grid grid-cols-2 gap-4 mt-auto">
                     <div className="p-4 rounded-xl bg-secondary/50 border border-border/50">
                       <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                         <Clock className="w-3 h-3" /> Time Remaining
                       </div>
-                      <div className={`text-2xl font-bold font-mono ${timeLeft < 60 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
-                        {formatTime(timeLeft)}
+                      <div className={`text-2xl font-bold font-mono ${timeLeft < 60 && status === 'live' ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
+                        {timeLeft > 0 ? formatTime(timeLeft) : '00:00'}
                       </div>
                     </div>
                     <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
@@ -160,7 +214,7 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
               <CardTitle>Place Your Bid</CardTitle>
             </CardHeader>
             <CardContent>
-              {status === 'live' ? (
+              {status === 'live' && timeLeft > 0 ? (
                 <div className="space-y-4">
                   <div className="flex gap-4">
                     <div className="relative flex-1">
@@ -208,12 +262,14 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
             <CardHeader className="border-b border-border/50 bg-secondary/20 pb-4">
               <CardTitle className="text-lg flex items-center justify-between">
                 Live Bid Feed
-                <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
-                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" /> Live
-                </span>
+                {status === 'live' && timeLeft > 0 && (
+                  <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" /> Live
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-y-auto" ref={feedRef}>
+            <CardContent className="flex-1 p-0 overflow-y-auto">
               <div className="flex flex-col p-4 gap-3">
                 <AnimatePresence initial={false}>
                   {bidFeed.map((bid, i) => (

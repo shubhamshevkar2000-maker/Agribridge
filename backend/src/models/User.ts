@@ -7,6 +7,7 @@ export interface IUser extends Document {
   passwordHash: string;
   role: 'farmer' | 'buyer' | 'logistics' | 'bank' | 'admin';
   kycStatus: 'pending' | 'verified' | 'rejected' | 'not_submitted';
+  kycDocument?: string;
   profileCompletion: number;
   languages: string[];
   location?: {
@@ -35,10 +36,11 @@ const userSchema = new Schema<IUser>(
       enum: ['pending', 'verified', 'rejected', 'not_submitted'],
       default: 'not_submitted',
     },
+    kycDocument: { type: String },
     profileCompletion: { type: Number, default: 0 },
     languages: [{ type: String }],
     location: {
-      type: { type: String, enum: ['Point'], default: 'Point' },
+      type: { type: String, enum: ['Point'] },
       coordinates: { type: [Number] },
     },
     trustScore: { type: Number },

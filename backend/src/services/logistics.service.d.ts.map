@@ -1,0 +1,1 @@
+{"version":3,"file":"logistics.service.d.ts","sourceRoot":"","sources":["logistics.service.ts"],"names":[],"mappings":"AAKA,eAAO,MAAM,oBAAoB,eACnB,MAAM,UACV,SAAS,GAAG,YAAY,GAAG,WAAW,oBAC5B;IAAE,GAAG,EAAE,MAAM,CAAC;IAAC,GAAG,EAAE,MAAM,CAAA;CAAE;;;;;;EAiD/C,CAAC;AAGF,eAAO,MAAM,aAAa,cAAe;IAAE,GAAG,EAAE,MAAM,CAAC;IAAC,GAAG,EAAE,MAAM,CAAA;CAAE,EAAE;SAAvB,MAAM;SAAO,MAAM;GAKlE,CAAC"}

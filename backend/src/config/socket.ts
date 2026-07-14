@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
+import { placeBidAtomic } from '../services/auction.service';
 
 let io: Server;
 
@@ -27,18 +28,18 @@ export const initializeSocket = (server: HttpServer) => {
     });
 
     // Handle incoming bid requests from clients
-    // (In a real app, you'd verify the JWT and call placeBidAtomic here)
     socket.on('auction:bid', async (data) => {
       console.log('Received bid attempt via socket:', data);
-      // Actual logic would be: await placeBidAtomic(data.auctionId, data.userId, data.amount);
-      // For mocking the frontend experience easily, we'll directly broadcast here as a stub
-      io!.to(`auction_${data.auctionId}`).emit('auction:update', {
-        auctionId: data.auctionId,
-        highestBid: data.amount,
-        highestBidder: data.userId,
-        timestamp: new Date().toISOString(),
-        isMock: true // Flag to show it bypassed Redis for the UI demo
-      });
+      try {
+        const success = await placeBidAtomic(data.auctionId, data.userId, data.amount);
+        if (!success) {
+          socket.emit('auction:error', { message: 'Bid was not high enough or auction ended' });
+        }
+        // If successful, placeBidAtomic automatically emits the 'auction:update' broadcast
+      } catch (err: any) {
+        console.error('Bid error:', err);
+        socket.emit('auction:error', { message: 'Internal server error processing bid' });
+      }
     });
 
     socket.on('disconnect', () => {

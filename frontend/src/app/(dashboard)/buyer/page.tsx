@@ -14,19 +14,33 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-// Mock Data matching schema expectations
-const mockOrders = [
-  { id: 'ORD-8921', date: '2026-07-12', crop: 'Premium Tomatoes', farmer: 'Ramesh Kumar', qty: '50 Qtl', amount: '₹1,17,500', status: 'In Transit' },
-  { id: 'ORD-8910', date: '2026-07-10', crop: 'Organic Wheat', farmer: 'Suresh Patel', qty: '200 Qtl', amount: '₹4,50,000', status: 'Delivered' },
-  { id: 'ORD-8855', date: '2026-07-05', crop: 'Basmati Rice', farmer: 'Anil Desai', qty: '100 Qtl', amount: '₹3,20,000', status: 'Delivered' },
-];
-
-const mockFavorites = [
-  { id: 1, name: 'Ramesh Kumar', location: 'Nashik, MH', crops: 'Tomatoes, Onions', trustScore: 850 },
-  { id: 2, name: 'Suresh Patel', location: 'Surat, GJ', crops: 'Wheat, Cotton', trustScore: 920 },
-];
+import { useState, useEffect } from 'react';
 
 export default function BuyerDashboard() {
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const token = localStorage.getItem('agribridge_token');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/dashboard/buyer`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const json = await res.json();
+        if (json.success) {
+          setDashboardData(json.data);
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, []);
   return (
     <div className="flex flex-col gap-8 max-w-7xl mx-auto">
       
@@ -39,8 +53,8 @@ export default function BuyerDashboard() {
               <div className="p-2 bg-primary/10 rounded-lg text-primary"><ShoppingBag className="w-4 h-4" /></div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-heading font-bold">12</div>
-              <div className="text-xs mt-1 font-medium text-primary">3 Arriving today</div>
+              <div className="text-3xl font-heading font-bold">{dashboardData?.recentOrders?.length || 0}</div>
+              <div className="text-xs mt-1 font-medium text-primary">In Transit</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -48,12 +62,12 @@ export default function BuyerDashboard() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
           <Card className="glass-card border-border/50">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Spent (YTD)</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Spent</CardTitle>
               <div className="p-2 bg-accent/10 rounded-lg text-accent"><TrendingUp className="w-4 h-4" /></div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-heading font-bold">₹1.2 Cr</div>
-              <div className="text-xs mt-1 font-medium text-primary">+15% vs Last Year</div>
+              <div className="text-3xl font-heading font-bold">₹{dashboardData?.totalSpent?.toLocaleString() || 0}</div>
+              <div className="text-xs mt-1 font-medium text-primary">Current Financial Year</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -61,12 +75,12 @@ export default function BuyerDashboard() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }}>
           <Card className="glass-card border-border/50">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Favorite Farmers</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Active Bids</CardTitle>
               <div className="p-2 bg-destructive/10 rounded-lg text-destructive"><Heart className="w-4 h-4" /></div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-heading font-bold">24</div>
-              <div className="text-xs mt-1 font-medium text-muted-foreground">Across 5 States</div>
+              <div className="text-3xl font-heading font-bold">{dashboardData?.activeBidsCount || 0}</div>
+              <div className="text-xs mt-1 font-medium text-muted-foreground">Live Auctions</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -97,22 +111,32 @@ export default function BuyerDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium text-primary">{order.id}</TableCell>
-                        <TableCell>{order.date}</TableCell>
-                        <TableCell>
-                          <div>{order.crop}</div>
-                          <div className="text-xs text-muted-foreground">by {order.farmer} • {order.qty}</div>
-                        </TableCell>
-                        <TableCell>{order.amount}</TableCell>
-                        <TableCell>
-                          <Badge variant={order.status === 'Delivered' ? 'default' : 'secondary'} className={order.status === 'Delivered' ? 'bg-primary' : ''}>
-                            {order.status}
-                          </Badge>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading orders...</TableCell>
+                      </TableRow>
+                    ) : dashboardData?.recentOrders?.length > 0 ? (
+                      dashboardData.recentOrders.map((order: any) => (
+                        <TableRow key={order._id}>
+                          <TableCell className="font-medium text-primary">{order._id.substring(0, 8)}</TableCell>
+                          <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                          <TableCell>{order.cropId || 'Crop'}</TableCell>
+                          <TableCell>₹{order.totalAmount}</TableCell>
+                          <TableCell>
+                            <Badge variant={order.status === 'Completed' ? 'default' : 'secondary'}>
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                          <ShoppingBag className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p>No recent purchases found.</p>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -161,7 +185,7 @@ export default function BuyerDashboard() {
               <CardTitle className="text-lg">Favorite Farmers</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {mockFavorites.map((farmer) => (
+              {favorites.map((farmer) => (
                 <div key={farmer.id} className="flex items-center justify-between p-3 rounded-xl border border-border/50 hover:bg-secondary/30 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">

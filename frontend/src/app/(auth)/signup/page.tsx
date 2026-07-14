@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, User, Tractor, ShoppingCart, Truck, Landmark } from 'lucide-react';
+import { Loader2, User, Tractor, ShoppingCart, Truck, Landmark, CheckCircle2, FileText, X } from 'lucide-react';
 
 const roles = [
   { id: 'farmer', title: 'Farmer', icon: Tractor, desc: 'Sell crops, run auctions, and access loans.' },
@@ -19,15 +19,112 @@ export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: ''
+  });
+  const [serverError, setServerError] = useState('');
+  
+  // File states
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string>('');
+  const [base64Data, setBase64Data] = useState<string>('');
+  const [fileError, setFileError] = useState<string>('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError('');
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate type
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      setFileError('Invalid file type. Only PDF, JPG, and PNG are allowed.');
+      setSelectedFile(null);
+      setFilePreview('');
+      setBase64Data('');
+      return;
+    }
+
+    // Validate size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setFileError('File size exceeds the 5MB limit.');
+      setSelectedFile(null);
+      setFilePreview('');
+      setBase64Data('');
+      return;
+    }
+
+    setSelectedFile(file);
+
+    // Create local preview URL
+    if (file.type.startsWith('image/')) {
+      setFilePreview(URL.createObjectURL(file));
+    } else {
+      setFilePreview('');
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setBase64Data(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const nextStep = () => setStep(step + 1);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    window.location.href = '/dashboard';
+    setServerError('');
+    try {
+      const payload: any = {
+        name: formData.name,
+        password: formData.password,
+        role: selectedRole
+      };
+      if (formData.email) payload.email = formData.email;
+      if (formData.phone) payload.phone = formData.phone;
+      if (base64Data) payload.kycDocument = base64Data;
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const resData = await response.json();
+
+      if (!response.ok || !resData.success) {
+        if (resData.errors && resData.errors.length > 0) {
+          throw new Error(resData.errors[0].message || 'Validation failed');
+        }
+        throw new Error(resData.message || 'Registration failed');
+      }
+
+      localStorage.setItem('token', resData.data.token);
+      localStorage.setItem('user_role', resData.data.role);
+      localStorage.setItem('user_name', resData.data.name);
+
+      const roleRedirects: Record<string, string> = {
+        farmer: '/farmer',
+        buyer: '/buyer',
+        logistics: '/logistics',
+        bank: '/bank',
+        admin: '/admin',
+      };
+
+      window.location.href = roleRedirects[resData.data.role] || '/farmer';
+    } catch (error: any) {
+      setServerError(error.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -74,10 +171,36 @@ export default function SignupPage() {
                   exit={{ opacity: 0, x: 20 }}
                   className="space-y-4 max-w-md mx-auto"
                 >
-                  <Input placeholder="Full Name" className="h-12 bg-input/30" />
-                  <Input placeholder="Email Address" type="email" className="h-12 bg-input/30" />
-                  <Input placeholder="Phone Number" type="tel" className="h-12 bg-input/30" />
-                  <Input placeholder="Password" type="password" className="h-12 bg-input/30" />
+                  <Input 
+                    placeholder="Full Name" 
+                    className="h-12 bg-input/30" 
+                    value={formData.name} 
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  />
+                  <Input 
+                    placeholder="Email Address" 
+                    type="email" 
+                    className="h-12 bg-input/30" 
+                    value={formData.email} 
+                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                  />
+                  <Input 
+                    placeholder="Phone Number" 
+                    type="tel" 
+                    className="h-12 bg-input/30" 
+                    value={formData.phone} 
+                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                  <Input 
+                    placeholder="Password" 
+                    type="password" 
+                    className="h-12 bg-input/30" 
+                    value={formData.password} 
+                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  />
+                  {serverError && (
+                    <p className="text-sm text-destructive font-medium text-center">{serverError}</p>
+                  )}
                   <Button onClick={nextStep} className="w-full h-12 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.02] transition-transform">
                     Continue
                   </Button>
@@ -133,12 +256,62 @@ export default function SignupPage() {
                     Upload your KYC documents to verify your identity. You can also skip this and do it later from your dashboard.
                   </div>
                   
-                  <label className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:bg-secondary/20 transition-colors cursor-pointer block">
-                    <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" />
-                    <User className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
-                    <div className="font-semibold text-foreground mb-1">Click to upload Aadhaar / PAN</div>
-                    <div className="text-xs text-muted-foreground">PDF, JPG or PNG (Max 5MB)</div>
-                  </label>
+                  <div className="relative">
+                    {selectedFile ? (
+                      <div className="border-2 border-dashed border-primary bg-primary/5 rounded-xl p-6 text-center relative">
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setSelectedFile(null);
+                            setFilePreview('');
+                            setBase64Data('');
+                            setFileError('');
+                          }} 
+                          className="absolute top-3 right-3 p-1 rounded-full hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                        
+                        <div className="flex flex-col items-center gap-3">
+                          {filePreview ? (
+                            <img src={filePreview} alt="KYC Preview" className="w-24 h-24 object-cover rounded-lg border border-border" />
+                          ) : (
+                            <div className="w-20 h-20 rounded-lg bg-secondary/80 flex items-center justify-center border border-border">
+                              <FileText className="w-10 h-10 text-primary" />
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-1.5 text-primary text-sm font-semibold mt-1">
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Document Captured</span>
+                          </div>
+                          
+                          <div className="text-sm font-medium text-foreground truncate max-w-[250px]">
+                            {selectedFile.name}
+                          </div>
+                          
+                          <div className="text-xs text-muted-foreground">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:bg-secondary/20 transition-colors cursor-pointer block">
+                        <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} />
+                        <User className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
+                        <div className="font-semibold text-foreground mb-1">Click to upload Aadhaar / PAN</div>
+                        <div className="text-xs text-muted-foreground">PDF, JPG or PNG (Max 5MB)</div>
+                      </label>
+                    )}
+                  </div>
+
+                  {fileError && (
+                    <p className="text-sm text-destructive font-medium text-center">{fileError}</p>
+                  )}
+
+                  {serverError && (
+                    <p className="text-sm text-destructive font-medium text-center mt-2 p-2 bg-destructive/10 rounded-lg border border-destructive/20">{serverError}</p>
+                  )}
 
                   <Button type="submit" disabled={isLoading} className="w-full h-12 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.02] transition-transform mt-4">
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Complete Sign Up'}

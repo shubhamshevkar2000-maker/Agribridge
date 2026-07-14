@@ -9,7 +9,7 @@ export const getPlatformKPIs = async () => {
   const totalUsers = await User.countDocuments();
   const totalAuctions = await Auction.countDocuments();
   
-  const transactions = await Transaction.find({ status: 'completed' });
+  const transactions = await Transaction.find({ status: 'success' });
   const gmv = transactions.reduce((acc, txn) => acc + txn.amount, 0);
 
   // Mock time-series data for the chart
