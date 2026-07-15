@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, User, Tractor, ShoppingCart, Truck, Landmark, CheckCircle2, FileText, X } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false });
 
 const roles = [
   { id: 'farmer', title: 'Farmer', icon: Tractor, desc: 'Sell crops, run auctions, and access loans.' },
@@ -75,6 +78,7 @@ export default function SignupPage() {
   };
 
   const nextStep = () => setStep(step + 1);
+  const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +93,7 @@ export default function SignupPage() {
       if (formData.email) payload.email = formData.email;
       if (formData.phone) payload.phone = formData.phone;
       if (base64Data) payload.kycDocument = base64Data;
+      if (coordinates) payload.location = { coordinates: [coordinates[1], coordinates[0]] }; // Longitude, Latitude for GeoJSON
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/signup`, {
         method: 'POST',
@@ -147,17 +152,17 @@ export default function SignupPage() {
             <motion.div 
               className="h-full bg-primary"
               initial={{ width: '0%' }}
-              animate={{ width: `${(step / 3) * 100}%` }}
+              animate={{ width: `${(step / 4) * 100}%` }}
               transition={{ duration: 0.3 }}
             />
           </div>
           
           <CardHeader className="text-center pb-2 pt-8">
             <CardTitle className="text-3xl font-heading">
-              {step === 1 ? 'Create an account' : step === 2 ? 'Choose your role' : 'Complete your profile'}
+              {step === 1 ? 'Create an account' : step === 2 ? 'Choose your role' : step === 3 ? 'Complete your profile' : 'Set your location'}
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground mt-2">
-              Step {step} of 3
+              Step {step} of 4
             </CardDescription>
           </CardHeader>
           
@@ -244,12 +249,11 @@ export default function SignupPage() {
               )}
 
               {step === 3 && (
-                <motion.form
+                <motion.div
                   key="step3"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  onSubmit={handleSubmit}
                   className="space-y-4 max-w-md mx-auto"
                 >
                   <div className="p-4 bg-secondary/50 rounded-xl border border-border/50 text-center mb-6 text-sm text-muted-foreground">
@@ -307,6 +311,38 @@ export default function SignupPage() {
 
                   {fileError && (
                     <p className="text-sm text-destructive font-medium text-center">{fileError}</p>
+                  )}
+
+                  {serverError && (
+                    <p className="text-sm text-destructive font-medium text-center mt-2 p-2 bg-destructive/10 rounded-lg border border-destructive/20">{serverError}</p>
+                  )}
+
+                  <Button type="button" onClick={nextStep} className="w-full h-12 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.02] transition-transform mt-4">
+                    Continue
+                  </Button>
+                </motion.div>
+              )}
+
+              {step === 4 && (
+                <motion.form
+                  key="step4"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  onSubmit={handleSubmit}
+                  className="space-y-4 max-w-md mx-auto"
+                >
+                  <div className="p-4 bg-secondary/50 rounded-xl border border-border/50 text-center mb-6 text-sm text-muted-foreground">
+                    Pin your location on the map. This helps us connect you with nearby logistics partners and farmers.
+                  </div>
+                  
+                  <div className="relative">
+                    <LocationPicker onLocationSelect={(loc) => setCoordinates(loc)} />
+                  </div>
+                  {coordinates && (
+                    <div className="text-center text-sm text-muted-foreground mt-2">
+                      Location selected: {coordinates[0].toFixed(4)}, {coordinates[1].toFixed(4)}
+                    </div>
                   )}
 
                   {serverError && (

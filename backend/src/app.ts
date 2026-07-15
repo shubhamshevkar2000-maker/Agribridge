@@ -38,6 +38,7 @@ import auctionRoutes from './routes/auction.routes';
 import creditRoutes from './routes/credit.routes';
 import loanRoutes from './routes/loan.routes';
 import deliveryRoutes from './routes/delivery.routes';
+import orderRoutes from './routes/order.routes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/payments', paymentRoutes);
@@ -50,5 +51,6 @@ app.use('/api/auctions', auctionRoutes);
 app.use('/api/credit', creditRoutes);
 app.use('/api/loans', loanRoutes);
 app.use('/api/deliveries', deliveryRoutes);
+app.use('/api/orders', orderRoutes);
 
 export default app;

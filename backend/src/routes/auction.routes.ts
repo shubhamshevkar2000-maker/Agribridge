@@ -4,13 +4,14 @@ import { protect } from '../middlewares/auth.middleware';
 import { Auction } from '../models/Auction';
 import { Crop } from '../models/Crop';
 import { redisClient } from '../config/redis';
+import { placeBidAtomic } from '../services/auction.service';
 
 const router = Router();
 
 const createAuctionSchema = z.object({
   cropId: z.string(),
   startingBid: z.number().positive(),
-  durationMinutes: z.number().positive().min(5),
+  durationMinutes: z.number().positive().min(1),
 });
 
 // POST /api/auctions - Create a new auction
@@ -54,6 +55,41 @@ router.post('/', protect, async (req: any, res) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ success: false, errors: (error as any).errors });
     }
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/auctions/:id/bid - Place a bid on an auction
+router.post('/:id/bid', protect, async (req: any, res) => {
+  try {
+    const { amount } = req.body;
+    const auctionId = req.params.id;
+    const buyerId = req.user.id;
+    
+    if (req.user.role !== 'buyer') {
+      return res.status(403).json({ success: false, message: 'Only buyers can place bids' });
+    }
+
+    const auction = await Auction.findById(auctionId);
+    if (!auction) {
+      return res.status(404).json({ success: false, message: 'Auction not found' });
+    }
+
+    if (auction.status !== 'live') {
+      return res.status(400).json({ success: false, message: 'Auction is not live' });
+    }
+
+    if (new Date() > auction.endTime) {
+      return res.status(400).json({ success: false, message: 'Auction has expired' });
+    }
+
+    const success = await placeBidAtomic(auctionId, buyerId, amount);
+    if (success) {
+      res.json({ success: true, message: 'Bid placed successfully' });
+    } else {
+      res.status(400).json({ success: false, message: 'Bid amount is too low' });
+    }
+  } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
 });

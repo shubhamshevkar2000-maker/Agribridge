@@ -1,10 +1,10 @@
-import { GoogleGenAI } from '@google/genai';
+import Groq from 'groq-sdk';
 import { AiInteraction } from '../models/AiInteraction';
 import { User } from '../models/User';
 import { getWeatherData } from './weather.service';
 
-// Initialize Gemini Client
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'mock-key-for-dev' });
+// Initialize Groq Client
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'mock-key-for-dev' });
 
 export const getKrishiSathiResponse = async (userId: string, prompt: string, language: string = 'en') => {
   try {
@@ -26,7 +26,7 @@ export const getKrishiSathiResponse = async (userId: string, prompt: string, lan
       }
     }
     
-    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'mock-key-for-dev') {
+    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'mock-key-for-dev') {
       // Dev mode without key
       const isPrice = prompt.toLowerCase().includes('price');
       const isWeather = prompt.toLowerCase().includes('weather') || prompt.toLowerCase().includes('rain');
@@ -43,7 +43,7 @@ export const getKrishiSathiResponse = async (userId: string, prompt: string, lan
       
       await new Promise(r => setTimeout(r, 1200));
     } else {
-      // Real Gemini API Call - STRICT GROUNDING
+      // Real Groq API Call - STRICT GROUNDING
       const systemInstruction = `You are KrishiSathi, an expert agricultural AI assistant for Indian farmers. 
 CRITICAL RULES:
 1. Respond concisely in ${language}.
@@ -51,13 +51,15 @@ CRITICAL RULES:
 3. If the user asks about the weather, ONLY use the following real weather data. DO NOT invent forecasts.
 ${weatherContext ? weatherContext : 'No weather data provided. If asked about weather, state that you do not have weather data.'}`;
       
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: { systemInstruction }
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: prompt }
+        ],
+        model: 'llama-3.3-70b-versatile',
       });
       
-      responseText = response.text || "I'm sorry, I couldn't process that request.";
+      responseText = chatCompletion.choices[0]?.message?.content || "I'm sorry, I couldn't process that request.";
     }
 
     await AiInteraction.create({
@@ -70,7 +72,7 @@ ${weatherContext ? weatherContext : 'No weather data provided. If asked about we
 
     return responseText;
   } catch (error) {
-    console.error('Gemini API Error:', error);
+    console.error('Groq API Error:', error);
     throw new Error('Failed to fetch AI response');
   }
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, TrendingUp, CheckCircle, Gavel, ArrowLeft } from 'lucide-react';
@@ -18,7 +18,9 @@ interface Bid {
   isCurrentUser: boolean;
 }
 
-export default function LiveAuctionPage({ params }: { params: { id: string } }) {
+export default function LiveAuctionPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = use(params);
+  const auctionId = unwrappedParams.id;
   const [socket, setSocket] = useState<Socket | null>(null);
   const [auction, setAuction] = useState<any>(null);
   const [highestBid, setHighestBid] = useState(0);
@@ -38,7 +40,7 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
           setCurrentUserId(payload.id);
         }
 
-        const res = await fetch(`http://localhost:5000/api/auctions/${params.id}`, {
+        const res = await fetch(`http://localhost:5000/api/auctions/${auctionId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -78,22 +80,22 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      newSocket.emit('auction:join', params.id);
+      newSocket.emit('auction:join', auctionId);
     });
 
     newSocket.on('auction:update', (data) => {
-      if (data.auctionId === params.id) {
+      if (data.auctionId === auctionId) {
         setHighestBid(data.highestBid);
-        setBidFeed(prev => {
-          const newBid: Bid = {
+        if (data.history) {
+          const formattedHistory = data.history.map((b: any) => ({
             id: Math.random().toString(36).substring(7),
-            amount: data.highestBid,
-            bidder: data.highestBidder === currentUserId ? 'You' : 'Buyer',
+            amount: b.amount,
+            bidder: b.bidderName || 'Buyer',
             timestamp: data.timestamp,
-            isCurrentUser: data.highestBidder === currentUserId
-          };
-          return [newBid, ...prev];
-        });
+            isCurrentUser: false
+          }));
+          setBidFeed(formattedHistory);
+        }
       }
     });
 
@@ -102,7 +104,7 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
     });
     
     newSocket.on('auction:completed', (data) => {
-      if (data.auctionId === params.id) {
+      if (data.auctionId === auctionId) {
         setStatus('ended');
         setHighestBid(data.amount);
         setTimeLeft(0);
@@ -112,7 +114,7 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
     return () => {
       newSocket.close();
     };
-  }, [params.id, currentUserId]);
+  }, [auctionId, currentUserId]);
 
   useEffect(() => {
     if (status === 'live' && timeLeft > 0) {
@@ -211,38 +213,14 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
 
           <Card className="glass-card border-border/50 flex-1">
             <CardHeader>
-              <CardTitle>Place Your Bid</CardTitle>
+              <CardTitle>Auction Status</CardTitle>
             </CardHeader>
             <CardContent>
               {status === 'live' && timeLeft > 0 ? (
-                <div className="space-y-4">
-                  <div className="flex gap-4">
-                    <div className="relative flex-1">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">₹</span>
-                      <Input 
-                        type="number" 
-                        placeholder={`Min. bid: ${highestBid + 50}`}
-                        className="pl-8 h-14 text-lg bg-input/30"
-                        value={bidAmount}
-                        onChange={(e) => setBidAmount(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && placeBid()}
-                      />
-                    </div>
-                    <Button 
-                      className="h-14 px-8 text-lg bg-primary-gradient hover:scale-[1.02] transition-transform shadow-lg shadow-primary/20"
-                      onClick={placeBid}
-                      disabled={parseInt(bidAmount) <= highestBid || !bidAmount}
-                    >
-                      <Gavel className="w-5 h-5 mr-2" /> Bid Now
-                    </Button>
-                  </div>
-                  <div className="flex gap-2">
-                    {[50, 100, 500].map(inc => (
-                      <Button key={inc} variant="outline" className="glass bg-background/50" onClick={() => setBidAmount((highestBid + inc).toString())}>
-                        +₹{inc}
-                      </Button>
-                    ))}
-                  </div>
+                <div className="p-6 bg-secondary/50 rounded-xl text-center border border-border/50">
+                  <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin mx-auto mb-4" />
+                  <h3 className="text-xl font-heading font-bold mb-2">Auction is Live</h3>
+                  <p className="text-muted-foreground">Buyers are currently placing bids on your crop.</p>
                 </div>
               ) : (
                 <div className="p-6 bg-secondary/50 rounded-xl text-center border border-border/50">

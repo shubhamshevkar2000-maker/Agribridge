@@ -102,7 +102,7 @@ export default function KrishiSathiAIPage() {
           <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-primary" /> KrishiSathi AI
           </h1>
-          <p className="text-muted-foreground">Powered by Google Gemini</p>
+          <p className="text-muted-foreground">Powered by Groq</p>
         </div>
         <div className="flex gap-2">
           <Badge variant="outline" className="bg-background">English</Badge>

@@ -41,6 +41,8 @@ export default function BuyerDashboard() {
     };
     fetchDashboard();
   }, []);
+  const favorites = dashboardData?.favorites || [];
+
   return (
     <div className="flex flex-col gap-8 max-w-7xl mx-auto">
       
@@ -185,22 +187,28 @@ export default function BuyerDashboard() {
               <CardTitle className="text-lg">Favorite Farmers</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {favorites.map((farmer) => (
-                <div key={farmer.id} className="flex items-center justify-between p-3 rounded-xl border border-border/50 hover:bg-secondary/30 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                      {farmer.name.charAt(0)}
+              {favorites.length > 0 ? (
+                favorites.map((farmer: any) => (
+                  <div key={farmer.id} className="flex items-center justify-between p-3 rounded-xl border border-border/50 hover:bg-secondary/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        {farmer.name.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{farmer.name}</div>
+                        <div className="text-xs text-muted-foreground">{farmer.location}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-medium text-sm">{farmer.name}</div>
-                      <div className="text-xs text-muted-foreground">{farmer.location}</div>
-                    </div>
+                    <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10">
+                      <MessageSquare className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10">
-                    <MessageSquare className="w-4 h-4" />
-                  </Button>
+                ))
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground text-sm">No favorite farmers yet.</p>
                 </div>
-              ))}
+              )}
               <Button variant="outline" className="w-full text-primary border-primary/20 bg-primary/5 hover:bg-primary/10">
                 Browse More Farmers
               </Button>

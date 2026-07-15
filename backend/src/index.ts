@@ -7,6 +7,8 @@ import app from './app';
 import { connectDB } from './config/db';
 import { connectRedis } from './config/redis';
 import { initializeSocket } from './config/socket';
+import { Auction } from './models/Auction';
+import { completeAuction } from './services/auction.service';
 
 const PORT = process.env.PORT || 5000;
 
@@ -23,6 +25,37 @@ const startServer = async () => {
     
     server.listen(PORT, () => {
       console.log(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+      
+      const groqKey = process.env.GROQ_API_KEY;
+      if (groqKey) {
+        console.log(`Groq key loaded: ${groqKey.substring(0, 4)}...${groqKey.substring(groqKey.length - 4)}`);
+      } else {
+        console.log('Groq key NOT loaded');
+      }
+
+      const weatherKey = process.env.OPENWEATHER_API_KEY;
+      if (weatherKey) {
+        console.log(`OpenWeather key loaded: ${weatherKey.substring(0, 4)}...${weatherKey.substring(weatherKey.length - 4)}`);
+      } else {
+        console.log('OpenWeather key NOT loaded');
+      }
+
+      // Background Worker to close expired auctions
+      setInterval(async () => {
+        try {
+          const expiredAuctions = await Auction.find({ 
+            status: 'live', 
+            endTime: { $lte: new Date() } 
+          });
+          for (const auction of expiredAuctions) {
+            console.log(`Closing expired auction ${auction._id}`);
+            await completeAuction(auction._id.toString());
+          }
+        } catch (err) {
+          console.error("Error in auction closing worker:", err);
+        }
+      }, 10000); // Check every 10 seconds
+
     });
   } catch (error) {
     console.error('Failed to start server:', error);

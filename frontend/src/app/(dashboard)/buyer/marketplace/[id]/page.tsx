@@ -52,9 +52,29 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
   }, [params.id]);
 
   const handleBuyNow = async () => {
-    // Stubbed Buy Now action
-    await new Promise(r => setTimeout(r, 1000));
-    setPurchaseSuccess(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          cropId: crop?._id,
+          quantity: crop?.quantity
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = '/buyer/orders';
+      } else {
+        alert(data.message || 'Failed to place order');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error placing order');
+    }
   };
 
   if (loading) {
@@ -173,7 +193,7 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
                 <Truck className="w-4 h-4" /> Eligible for shared logistics routing
               </div>
               <Button size="lg" className="w-full h-14 text-lg bg-primary-gradient hover:scale-[1.02] transition-transform shadow-lg shadow-primary/20" onClick={handleBuyNow}>
-                Buy Now (Phase 6 Stub)
+                Buy Now
               </Button>
             </div>
 

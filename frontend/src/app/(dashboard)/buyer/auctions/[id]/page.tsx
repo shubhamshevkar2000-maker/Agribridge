@@ -18,7 +18,11 @@ interface Bid {
   isCurrentUser: boolean;
 }
 
-export default function LiveAuctionPage({ params }: { params: { id: string } }) {
+import { use } from 'react';
+
+export default function LiveAuctionPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = use(params);
+  const auctionId = unwrappedParams.id;
   const [socket, setSocket] = useState<Socket | null>(null);
   const [auction, setAuction] = useState<any>(null);
   const [highestBid, setHighestBid] = useState(0);
@@ -38,7 +42,7 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
           setCurrentUserId(payload.id);
         }
 
-        const res = await fetch(`http://localhost:5000/api/auctions/${params.id}`, {
+        const res = await fetch(`http://localhost:5000/api/auctions/${auctionId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -78,22 +82,22 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      newSocket.emit('auction:join', params.id);
+      newSocket.emit('auction:join', auctionId);
     });
 
     newSocket.on('auction:update', (data) => {
-      if (data.auctionId === params.id) {
+      if (data.auctionId === auctionId) {
         setHighestBid(data.highestBid);
-        setBidFeed(prev => {
-          const newBid: Bid = {
+        if (data.history) {
+          const formattedHistory = data.history.map((b: any) => ({
             id: Math.random().toString(36).substring(7),
-            amount: data.highestBid,
-            bidder: data.highestBidder === currentUserId ? 'You' : 'Buyer',
+            amount: b.amount,
+            bidder: b.bidderId === currentUserId ? 'You' : b.bidderName,
             timestamp: data.timestamp,
-            isCurrentUser: data.highestBidder === currentUserId
-          };
-          return [newBid, ...prev];
-        });
+            isCurrentUser: b.bidderId === currentUserId
+          }));
+          setBidFeed(formattedHistory);
+        }
       }
     });
 
@@ -102,7 +106,7 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
     });
     
     newSocket.on('auction:completed', (data) => {
-      if (data.auctionId === params.id) {
+      if (data.auctionId === auctionId) {
         setStatus('ended');
         setHighestBid(data.amount);
         setTimeLeft(0);
@@ -112,7 +116,7 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
     return () => {
       newSocket.close();
     };
-  }, [params.id, currentUserId]);
+  }, [auctionId, currentUserId]);
 
   useEffect(() => {
     if (status === 'live' && timeLeft > 0) {
@@ -129,16 +133,28 @@ export default function LiveAuctionPage({ params }: { params: { id: string } }) 
     }
   }, [status, timeLeft]);
 
-  const placeBid = () => {
+  const placeBid = async () => {
     const val = parseInt(bidAmount);
     if (!val || val <= highestBid) return;
     
-    if (socket && currentUserId) {
-      socket.emit('auction:bid', {
-        auctionId: params.id,
-        amount: val,
-        userId: currentUserId
-      });
+    if (currentUserId) {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:5000/api/auctions/${auctionId}/bid`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ amount: val })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          alert(`Bid Error: ${data.message}`);
+        }
+      } catch (err: any) {
+        alert(`Bid Error: ${err.message}`);
+      }
     }
     setBidAmount('');
   };

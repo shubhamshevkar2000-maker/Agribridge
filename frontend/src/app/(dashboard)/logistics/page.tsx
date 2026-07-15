@@ -23,10 +23,10 @@ export default function LogisticsDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboard = async () => {
+    const fetchPools = async () => {
       try {
-        const token = localStorage.getItem('agribridge_token');
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/dashboard/logistics`, {
+        const token = localStorage.getItem('token') || localStorage.getItem('agribridge_token');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/deliveries/pool`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -36,15 +36,15 @@ export default function LogisticsDashboard() {
           setDashboardData(json.data);
         }
       } catch (err) {
-        console.error("Error fetching dashboard data:", err);
+        console.error("Error fetching pools:", err);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchDashboard();
+    fetchPools();
   }, []);
 
-  const stops = dashboardData?.recentDeliveries || [];
+  const pools = dashboardData || [];
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 max-w-[1600px] mx-auto h-[calc(100vh-8rem)]">
@@ -54,57 +54,55 @@ export default function LogisticsDashboard() {
         
         <Card className="glass-card border-border/50">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-heading">Route MH-104</CardTitle>
-            <CardDescription>Multi-stop optimized route</CardDescription>
+            <CardTitle className="text-xl font-heading">
+              {pools.length > 0 ? `${pools.length} Suggested Pools` : 'No Active Routes'}
+            </CardTitle>
+            <CardDescription>{pools.length > 0 ? 'Cost-sharing pooled routes' : 'No pending deliveries to pool'}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             
-            <div className="flex items-center gap-4 p-3 bg-secondary/50 rounded-xl border border-border/50">
-              <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
-                <Truck className="w-5 h-5" />
+            {stops.length > 0 && (
+              <div className="flex items-center gap-4 p-3 bg-secondary/50 rounded-xl border border-border/50">
+                <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-semibold text-sm">Vehicle: {dashboardData?.vehicleId?.registrationNumber || 'Unassigned'}</div>
+                  <div className="text-xs text-muted-foreground">Driver: {dashboardData?.driverId?.name || 'Unassigned'}</div>
+                </div>
               </div>
-              <div>
-                <div className="font-semibold text-sm">Vehicle: MH15 AB 1234</div>
-                <div className="text-xs text-muted-foreground">Driver: Raju Patil</div>
-              </div>
-            </div>
+            )}
 
             <div className="relative pl-6 space-y-8 before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
               
               {isLoading ? (
-                <div className="text-center text-muted-foreground py-8">Loading itinerary...</div>
-              ) : stops.length > 0 ? (
-                stops.map((stop: any) => (
-                  <div key={stop.id} className="relative z-10 flex gap-4">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 mt-0.5 ${
-                      stop.completed 
-                        ? 'bg-primary border-primary text-white' 
-                        : stop.current 
-                          ? 'bg-background border-blue-500 text-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' 
-                          : 'bg-background border-border text-muted-foreground'
-                    }`}>
-                      {stop.completed ? <CheckCircle className="w-3 h-3" /> : <div className="w-2 h-2 rounded-full bg-current" />}
+                <div className="text-center text-muted-foreground py-8">Loading pools...</div>
+              ) : pools.length > 0 ? (
+                pools.map((pool: any, index: number) => (
+                  <div key={pool.poolId} className="relative z-10 flex flex-col gap-2 mb-6">
+                    <div className="flex items-center gap-2 font-bold text-lg mb-2">
+                      <Truck className="text-primary w-5 h-5" /> Pool #{index + 1}
                     </div>
-                    
-                    <div className={`flex flex-col flex-1 p-4 rounded-xl border ${stop.current ? 'bg-blue-500/5 border-blue-500/30' : 'bg-background border-border/50'}`}>
-                      <div className="flex justify-between items-start mb-2">
-                        <div className={`font-semibold ${stop.completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                          {stop.title}
+                    <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                      <span>Total Vol: {pool.totalQuantity} units</span>
+                      <span>Est. Cost: ₹{pool.estimatedTotalCost.toFixed(2)}</span>
+                    </div>
+                    {pool.orders.map((o: any) => (
+                      <div key={o.orderId} className={`flex flex-col flex-1 p-4 rounded-xl border bg-background border-border/50`}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div className={`font-semibold text-foreground`}>
+                            {o.crop?.name} (Farmer: {o.farmer?.name})
+                          </div>
+                          <Badge variant="outline" className="text-orange-500 border-orange-500/30">
+                            PICKUP
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className={stop.type === 'pickup' ? 'text-orange-500 border-orange-500/30' : 'text-green-500 border-green-500/30'}>
-                          {stop.type.toUpperCase()}
-                        </Badge>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> Qty: {o.quantity}</span>
+                          <span className="font-bold text-primary">Split Cost: ₹{o.costShare.toFixed(2)}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                        <MapPin className="w-3 h-3" /> {stop.location}
-                        <Clock className="w-3 h-3 ml-2" /> {stop.time}
-                      </div>
-                      {stop.current && (
-                        <Button size="sm" className="w-full bg-blue-500 hover:bg-blue-600 text-white mt-2">
-                          Mark Arrived
-                        </Button>
-                      )}
-                    </div>
+                    ))}
                   </div>
                 ))
               ) : (
@@ -125,46 +123,58 @@ export default function LogisticsDashboard() {
       <div className="flex-1 flex flex-col h-full overflow-hidden rounded-3xl border border-border/50 bg-secondary/20 relative">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cartographer.png')] opacity-20 dark:opacity-5 mix-blend-overlay pointer-events-none" />
         
-        {/* Mock Map UI overlay */}
-        <div className="absolute top-4 left-4 z-10 glass-card p-4 rounded-xl border border-border/50 shadow-lg">
-          <h3 className="font-heading font-bold mb-1">Live Tracking</h3>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            <Navigation className="w-3.5 h-3.5 text-blue-500" /> Navigating to Farm B (15 mins away)
-          </p>
-        </div>
+        {pools.length > 0 ? (
+          <>
+            {/* Mock Map UI overlay */}
+            <div className="absolute top-4 left-4 z-10 glass-card p-4 rounded-xl border border-border/50 shadow-lg">
+              <h3 className="font-heading font-bold mb-1">Live Tracking</h3>
+              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                <Navigation className="w-3.5 h-3.5 text-blue-500" /> Navigating to next stop
+              </p>
+            </div>
 
-        <div className="absolute bottom-4 right-4 z-10">
-          <Button className="bg-primary-gradient shadow-lg">
-            <Navigation className="w-4 h-4 mr-2" /> Open in Maps
-          </Button>
-        </div>
+            <div className="absolute bottom-4 right-4 z-10">
+              <Button className="bg-primary-gradient shadow-lg">
+                <Navigation className="w-4 h-4 mr-2" /> Open in Maps
+              </Button>
+            </div>
 
-        {/* Central Map Illustration Mock */}
-        <div className="flex-1 flex items-center justify-center relative overflow-hidden">
-           {/* Connecting Line */}
-           <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-             <path d="M 30% 40% Q 50% 20% 70% 60%" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeDasharray="8 8" className="animate-[dash_20s_linear_infinite]" />
-           </svg>
-           
-           <motion.div 
-             initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 }}
-             className="absolute left-[30%] top-[40%] w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white shadow-lg -translate-x-1/2 -translate-y-1/2"
-           >
-             <CheckCircle className="w-4 h-4" />
-           </motion.div>
+            {/* Central Map Illustration Mock */}
+            <div className="flex-1 flex items-center justify-center relative overflow-hidden">
+               {/* Connecting Line */}
+               <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+                 <path d="M 30% 40% Q 50% 20% 70% 60%" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeDasharray="8 8" className="animate-[dash_20s_linear_infinite]" />
+               </svg>
+               
+               <motion.div 
+                 initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 }}
+                 className="absolute left-[30%] top-[40%] w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white shadow-lg -translate-x-1/2 -translate-y-1/2"
+               >
+                 <CheckCircle className="w-4 h-4" />
+               </motion.div>
 
-           <motion.div 
-             initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4 }}
-             className="absolute left-[50%] top-[30%] w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(59,130,246,0.6)] -translate-x-1/2 -translate-y-1/2 animate-bounce"
-           >
-             <Truck className="w-4 h-4" />
-           </motion.div>
+               <motion.div 
+                 initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4 }}
+                 className="absolute left-[50%] top-[30%] w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(59,130,246,0.6)] -translate-x-1/2 -translate-y-1/2 animate-bounce"
+               >
+                 <Truck className="w-4 h-4" />
+               </motion.div>
 
-           <motion.div 
-             initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.6 }}
-             className="absolute left-[70%] top-[60%] w-6 h-6 rounded-full bg-background border-4 border-destructive shadow-lg -translate-x-1/2 -translate-y-1/2"
-           />
-        </div>
+               <motion.div 
+                 initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.6 }}
+                 className="absolute left-[70%] top-[60%] w-6 h-6 rounded-full bg-background border-4 border-destructive shadow-lg -translate-x-1/2 -translate-y-1/2"
+               />
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+            <MapPin className="w-16 h-16 text-muted-foreground/30 mb-4" />
+            <h3 className="text-xl font-heading font-bold mb-2">Map Unavailable</h3>
+            <p className="text-muted-foreground max-w-sm">
+              Your map will appear here once you have an active route assigned to your fleet.
+            </p>
+          </div>
+        )}
       </div>
 
     </div>

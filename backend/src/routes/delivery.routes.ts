@@ -101,6 +101,98 @@ router.get('/', protect, async (req: any, res) => {
   }
 });
 
+// Distance calculation using Haversine formula
+function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+  return R * c; // Distance in km
+}
+
+// GET /api/deliveries/pool
+router.get('/pool', protect, async (req: any, res) => {
+  try {
+    // Find all pending orders that need delivery
+    const pendingOrders = await Order.find({ deliveryStatus: 'pending' })
+      .populate('farmerId', 'name location')
+      .populate('buyerId', 'name location')
+      .populate('cropId', 'name category');
+
+    const pools: any[] = [];
+    const MAX_RADIUS_KM = 50;
+    const COST_PER_KM = 20;
+
+    for (const order of pendingOrders) {
+      if (!order.farmerId || !(order.farmerId as any).location?.coordinates) continue;
+
+      const farmerCoords = (order.farmerId as any).location.coordinates;
+      let addedToPool = false;
+
+      // Try to add to existing pool
+      for (const pool of pools) {
+        const poolCenter = pool.center;
+        const distance = getDistanceFromLatLonInKm(
+          farmerCoords[1], farmerCoords[0], // lat, lon
+          poolCenter[1], poolCenter[0]
+        );
+
+        if (distance <= MAX_RADIUS_KM) {
+          pool.orders.push(order);
+          pool.totalQuantity += order.quantity;
+          pool.maxDistance = Math.max(pool.maxDistance, distance);
+          addedToPool = true;
+          break;
+        }
+      }
+
+      // Create new pool if no matching one
+      if (!addedToPool) {
+        pools.push({
+          id: `pool_${Math.random().toString(36).substr(2, 9)}`,
+          center: farmerCoords, // [lon, lat]
+          orders: [order],
+          totalQuantity: order.quantity,
+          maxDistance: 0
+        });
+      }
+    }
+
+    // Calculate cost splits
+    const suggestedRoutes = pools.map(pool => {
+      // Estimated route distance = center to furthest point * 2 (round trip pickup) + dropoff dist
+      const estimatedPickupDistance = pool.maxDistance * 2 || 10; 
+      const estimatedTotalCost = estimatedPickupDistance * COST_PER_KM;
+
+      // Split cost based on quantity ratio
+      const ordersWithCostSplit = pool.orders.map((o: any) => ({
+        orderId: o._id,
+        crop: o.cropId,
+        farmer: o.farmerId,
+        buyer: o.buyerId,
+        quantity: o.quantity,
+        costShare: (o.quantity / pool.totalQuantity) * estimatedTotalCost
+      }));
+
+      return {
+        poolId: pool.id,
+        center: pool.center,
+        totalQuantity: pool.totalQuantity,
+        estimatedTotalCost,
+        orders: ordersWithCostSplit
+      };
+    });
+
+    res.json({ success: true, data: suggestedRoutes });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // GET /api/deliveries/:id
 router.get('/:id', protect, async (req, res) => {
   try {

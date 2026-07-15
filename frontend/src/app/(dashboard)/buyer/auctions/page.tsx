@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Gavel, Clock, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface Auction {
   _id: string;

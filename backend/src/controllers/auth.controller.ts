@@ -11,7 +11,10 @@ const signupSchema = z.object({
   phone: z.string().optional(),
   password: z.string().min(6),
   role: z.enum(['farmer', 'buyer', 'logistics', 'bank', 'admin']),
-  kycDocument: z.string().optional()
+  kycDocument: z.string().optional(),
+  location: z.object({
+    coordinates: z.array(z.number()).length(2),
+  }).optional()
 }).refine(data => data.email || data.phone, {
   message: "Either email or phone is required",
 });
@@ -71,7 +74,11 @@ export const signup = async (req: Request, res: Response) => {
       passwordHash,
       role: validatedData.role,
       kycStatus: kycStatusValue,
-      kycDocument: kycUrl || undefined
+      kycDocument: kycUrl || undefined,
+      location: validatedData.location ? {
+        type: 'Point',
+        coordinates: validatedData.location.coordinates
+      } : undefined
     });
 
     const token = generateToken(user._id.toString(), user.role);
