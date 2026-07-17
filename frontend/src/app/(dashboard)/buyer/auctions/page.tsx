@@ -27,26 +27,33 @@ interface Auction {
   status: string;
 }
 
+import { api } from '@/lib/api';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+
 export default function AuctionsPage() {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAuctions = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.get('/api/auctions');
+      if (data.success) {
+        setAuctions(data.data);
+      } else {
+        throw new Error(data.message || 'Failed to fetch auctions');
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch auctions:', err);
+      setError(err.message || 'Unable to connect to the server. Please verify network or backend availability.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAuctions = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/auctions', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success) {
-          setAuctions(data.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch auctions:', err);
-      }
-      setLoading(false);
-    };
     fetchAuctions();
   }, []);
 
@@ -61,7 +68,16 @@ export default function AuctionsPage() {
         </div>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
+          <AlertCircle className="w-12 h-12 text-destructive" />
+          <h3 className="text-xl font-heading font-bold">Failed to Load Auctions</h3>
+          <p className="text-muted-foreground max-w-md">{error}</p>
+          <Button onClick={fetchAuctions} className="gap-2">
+            <RefreshCw className="w-4 h-4" /> Retry
+          </Button>
+        </div>
+      ) : loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
         </div>

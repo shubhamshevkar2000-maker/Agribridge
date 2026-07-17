@@ -19,11 +19,13 @@ import { useState, useEffect } from 'react';
 export default function BuyerDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [isDeliveriesLoading, setIsDeliveriesLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const token = localStorage.getItem('agribridge_token');
+        const token = localStorage.getItem('token');
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/dashboard/buyer`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -39,7 +41,28 @@ export default function BuyerDashboard() {
         setIsLoading(false);
       }
     };
+
+    const fetchDeliveries = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/deliveries`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const json = await res.json();
+        if (json.success) {
+          setDeliveries(json.data);
+        }
+      } catch (err) {
+        console.error("Error fetching deliveries:", err);
+      } finally {
+        setIsDeliveriesLoading(false);
+      }
+    };
+
     fetchDashboard();
+    fetchDeliveries();
   }, []);
   const favorites = dashboardData?.favorites || [];
 
@@ -96,7 +119,7 @@ export default function BuyerDashboard() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="font-heading text-xl">Recent Purchases</CardTitle>
-                <CardDescription>Your latest orders (Using mock data until Phase 6)</CardDescription>
+                <CardDescription>Your latest orders</CardDescription>
               </div>
               <Button variant="outline" size="sm">View All</Button>
             </CardHeader>
@@ -155,30 +178,49 @@ export default function BuyerDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 relative overflow-hidden">
-                <div className="flex justify-between items-start mb-4 relative z-10">
-                  <div>
-                    <div className="font-bold">ORD-8921</div>
-                    <div className="text-sm text-muted-foreground">Arriving Today, 4:00 PM</div>
-                  </div>
-                  <Badge className="bg-primary">In Transit</Badge>
-                </div>
-                
-                <div className="relative z-10 flex flex-col gap-3">
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="w-8 h-8 rounded-full bg-background flex items-center justify-center text-primary border border-primary/30 shrink-0">
-                      <MapPin className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Current Location</div>
-                      <div className="text-xs text-muted-foreground">30km away from destination</div>
-                    </div>
-                  </div>
-                </div>
+              {isDeliveriesLoading ? (
+                <div className="text-center py-4 text-muted-foreground text-sm">Loading tracker...</div>
+              ) : deliveries.length > 0 ? (
+                <div className="space-y-4">
+                  {deliveries.slice(0, 1).map((delivery: any) => (
+                    <div key={delivery._id} className="p-4 bg-primary/5 rounded-xl border border-primary/20 relative overflow-hidden">
+                      <div className="flex justify-between items-start mb-4 relative z-10">
+                        <div>
+                          <div className="font-bold uppercase text-sm truncate max-w-[150px]">
+                            {delivery.orderId?.cropId?.name || 'Crop Delivery'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Status: {delivery.status.replace('_', ' ')}
+                          </div>
+                        </div>
+                        <Badge className="bg-primary uppercase text-[10px]">
+                          {delivery.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="relative z-10 flex flex-col gap-3">
+                        <div className="flex items-center gap-3 text-sm">
+                          <div className="w-8 h-8 rounded-full bg-background flex items-center justify-center text-primary border border-primary/30 shrink-0">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-xs">Estimated Arrival</div>
+                            <div className="text-xs text-muted-foreground">
+                              {delivery.status === 'delivered' ? 'Delivered successfully' : 'In transit to destination'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-                {/* Decorative Map Pattern Background */}
-                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '16px 16px' }} />
-              </div>
+                      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '16px 16px' }} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-sm text-muted-foreground border border-dashed border-border/50 rounded-xl bg-secondary/20">
+                  No active crop shipments to track.
+                </div>
+              )}
             </CardContent>
           </Card>
 

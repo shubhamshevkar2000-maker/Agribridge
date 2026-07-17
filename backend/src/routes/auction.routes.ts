@@ -53,7 +53,7 @@ router.post('/', protect, async (req: any, res) => {
     res.status(201).json({ success: true, data: auction });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ success: false, errors: (error as any).errors });
+      return res.status(400).json({ success: false, errors: error.issues });
     }
     res.status(500).json({ success: false, message: error.message });
   }

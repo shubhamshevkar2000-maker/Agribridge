@@ -19,9 +19,17 @@ interface Crop {
   farmerId?: {
     _id: string;
     name: string;
-    location?: { coordinates?: number[] };
     trustScore?: number;
+    location?: {
+      type: string;
+      coordinates: number[];
+    };
   };
+  location?: {
+    type: string;
+    coordinates: number[];
+  };
+  images?: string[];
   harvestDate?: string;
   createdAt: string;
 }
@@ -52,7 +60,6 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
   }, [params.id]);
 
   const handleBuyNow = async () => {
-    // Stubbed Buy Now action
     await new Promise(r => setTimeout(r, 1000));
     setPurchaseSuccess(true);
   };
@@ -75,6 +82,12 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
       </div>
     );
   }
+
+  const cropLocation = crop.location?.coordinates || crop.farmerId?.location?.coordinates;
+  const locationText = cropLocation ? `Coords: ${cropLocation.join(', ')}` : 'Location: Not Available';
+  const trustScoreText = crop.farmerId?.trustScore !== undefined && crop.farmerId?.trustScore !== null
+    ? `${crop.farmerId.trustScore} Trust Score`
+    : 'Trust Score: Not Available';
 
   return (
     <div className="max-w-6xl mx-auto pb-12">
@@ -105,7 +118,14 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
           {/* Left Column - Image Placeholder */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <div className="relative rounded-3xl overflow-hidden aspect-[4/3] glass-card border border-border/50 bg-muted flex items-center justify-center">
-              <span className="text-muted-foreground/30 font-bold text-6xl uppercase">{crop.category}</span>
+              {crop.images && crop.images.length > 0 ? (
+                <img src={crop.images[0]} alt={crop.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full w-full bg-secondary/30 text-muted-foreground">
+                  <ShoppingBag className="w-12 h-12 mb-2 opacity-40" />
+                  <span className="text-sm font-semibold uppercase tracking-wider font-heading">No Image</span>
+                </div>
+              )}
               <div className="absolute top-4 left-4 flex gap-2">
                 {crop.isOrganic && <Badge className="bg-primary shadow-lg backdrop-blur-md px-3 py-1 text-sm"><Leaf className="w-3 h-3 mr-1" /> Organic</Badge>}
               </div>
@@ -122,7 +142,7 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col">
             <h1 className="text-3xl lg:text-4xl font-heading font-bold mb-2">{crop.name}</h1>
             <div className="flex items-center gap-4 text-muted-foreground mb-6">
-              <div className="flex items-center gap-1"><MapPin className="w-4 h-4" /> Maharashtra, India</div>
+              <div className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {locationText}</div>
               <div className="w-1 h-1 rounded-full bg-border" />
               <div>Listed recently</div>
             </div>
@@ -162,7 +182,7 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
                 <div>
                   <div className="font-semibold text-lg">{crop.farmerId?.name || 'Unknown Farmer'}</div>
                   <div className="text-sm text-primary flex items-center gap-1 font-medium">
-                    <ShieldCheck className="w-4 h-4" /> AgriBridge Verified ({crop.farmerId?.trustScore || 850} Trust Score)
+                    <ShieldCheck className="w-4 h-4" /> AgriBridge Verified ({trustScoreText})
                   </div>
                 </div>
               </div>
@@ -173,7 +193,7 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
                 <Truck className="w-4 h-4" /> Eligible for shared logistics routing
               </div>
               <Button size="lg" className="w-full h-14 text-lg bg-primary-gradient hover:scale-[1.02] transition-transform shadow-lg shadow-primary/20" onClick={handleBuyNow}>
-                Buy Now (Phase 6 Stub)
+                Buy Now
               </Button>
             </div>
 

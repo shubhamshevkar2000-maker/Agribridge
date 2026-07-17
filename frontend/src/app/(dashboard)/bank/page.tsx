@@ -27,7 +27,7 @@ export default function BankDashboard() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const token = localStorage.getItem('agribridge_token');
+        const token = localStorage.getItem('token');
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/dashboard/bank`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -49,10 +49,40 @@ export default function BankDashboard() {
   const handleAction = async (status: 'approved' | 'rejected') => {
     if (!selectedApp) return;
     setIsProcessing(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setApplications(apps => apps.map(app => app.id === selectedApp.id ? { ...app, status } : app));
-    setIsProcessing(false);
-    setIsDialogOpen(false);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/loans/${selectedApp._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDashboardData((prev: any) => {
+          if (!prev) return prev;
+          const updatedApps = prev.recentApplications.map((app: any) => 
+            app._id === selectedApp._id ? { ...app, status } : app
+          );
+          return {
+            ...prev,
+            recentApplications: updatedApps,
+            activeLoansCount: status === 'approved' ? prev.activeLoansCount + 1 : prev.activeLoansCount,
+            pendingApplicationsCount: prev.pendingApplicationsCount - 1
+          };
+        });
+      } else {
+        alert(data.message || 'Failed to update loan status');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Error updating loan status');
+    } finally {
+      setIsProcessing(false);
+      setIsDialogOpen(false);
+    }
   };
 
   return (

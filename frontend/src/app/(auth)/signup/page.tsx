@@ -29,6 +29,7 @@ export default function SignupPage() {
     password: ''
   });
   const [serverError, setServerError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   // File states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -77,7 +78,42 @@ export default function SignupPage() {
     reader.readAsDataURL(file);
   };
 
-  const nextStep = () => setStep(step + 1);
+  const nextStep = () => {
+    if (step === 1) {
+      const newErrors: Record<string, string> = {};
+      
+      if (!formData.name || !formData.name.trim()) {
+        newErrors.name = 'Name is required.';
+      } else if (formData.name.trim().length < 2) {
+        newErrors.name = 'Name must be at least 2 characters.';
+      }
+
+      if (!formData.email && !formData.phone) {
+        newErrors.email = 'Either email or phone number is required.';
+        newErrors.phone = 'Either email or phone number is required.';
+      } else {
+        if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
+          newErrors.email = 'Please enter a valid email address.';
+        }
+        if (formData.phone && !/^\+?[0-9]{10,15}$/.test(formData.phone.replace(/[\s-]/g, ''))) {
+          newErrors.phone = 'Please enter a valid phone number (10-15 digits).';
+        }
+      }
+
+      if (!formData.password) {
+        newErrors.password = 'Password is required.';
+      } else if (formData.password.length < 6) {
+        newErrors.password = 'Password must be at least 6 characters.';
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        return;
+      }
+    }
+    setErrors({});
+    setStep(step + 1);
+  };
   const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,7 +143,14 @@ export default function SignupPage() {
 
       if (!response.ok || !resData.success) {
         if (resData.errors && resData.errors.length > 0) {
-          throw new Error(resData.errors[0].message || 'Validation failed');
+          const msgs = resData.errors.map((err: any) => {
+            const pathName = err.path && err.path.length > 0 
+              ? err.path[0].charAt(0).toUpperCase() + err.path[0].slice(1) 
+              : '';
+            const prefix = pathName ? `${pathName}: ` : '';
+            return `${prefix}${err.message || 'Validation failed'}`;
+          });
+          throw new Error(msgs.join('\n'));
         }
         throw new Error(resData.message || 'Registration failed');
       }
@@ -176,35 +219,75 @@ export default function SignupPage() {
                   exit={{ opacity: 0, x: 20 }}
                   className="space-y-4 max-w-md mx-auto"
                 >
-                  <Input 
-                    placeholder="Full Name" 
-                    className="h-12 bg-input/30" 
-                    value={formData.name} 
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  />
-                  <Input 
-                    placeholder="Email Address" 
-                    type="email" 
-                    className="h-12 bg-input/30" 
-                    value={formData.email} 
-                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                  />
-                  <Input 
-                    placeholder="Phone Number" 
-                    type="tel" 
-                    className="h-12 bg-input/30" 
-                    value={formData.phone} 
-                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                  <Input 
-                    placeholder="Password" 
-                    type="password" 
-                    className="h-12 bg-input/30" 
-                    value={formData.password} 
-                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                  />
+                  <div className="space-y-1">
+                    <Input 
+                      placeholder="Full Name" 
+                      className={`h-12 bg-input/30 ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                      value={formData.name} 
+                      onChange={e => {
+                        setFormData({ ...formData, name: e.target.value });
+                        if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+                      }}
+                    />
+                    {errors.name && (
+                      <p className="text-xs text-destructive font-medium pl-1">{errors.name}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Input 
+                      placeholder="Email Address" 
+                      type="email" 
+                      className={`h-12 bg-input/30 ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                      value={formData.email} 
+                      onChange={e => {
+                        setFormData({ ...formData, email: e.target.value });
+                        if (errors.email) setErrors(prev => ({ ...prev, email: '', phone: '' }));
+                      }}
+                    />
+                    {errors.email && (
+                      <p className="text-xs text-destructive font-medium pl-1">{errors.email}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Input 
+                      placeholder="Phone Number" 
+                      type="tel" 
+                      className={`h-12 bg-input/30 ${errors.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                      value={formData.phone} 
+                      onChange={e => {
+                        setFormData({ ...formData, phone: e.target.value });
+                        if (errors.phone) setErrors(prev => ({ ...prev, phone: '', email: '' }));
+                      }}
+                    />
+                    {errors.phone && (
+                      <p className="text-xs text-destructive font-medium pl-1">{errors.phone}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Input 
+                      placeholder="Password" 
+                      type="password" 
+                      className={`h-12 bg-input/30 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                      value={formData.password} 
+                      onChange={e => {
+                        setFormData({ ...formData, password: e.target.value });
+                        if (errors.password) setErrors(prev => ({ ...prev, password: '' }));
+                      }}
+                    />
+                    {errors.password && (
+                      <p className="text-xs text-destructive font-medium pl-1">{errors.password}</p>
+                    )}
+                  </div>
+
                   {serverError && (
-                    <p className="text-sm text-destructive font-medium text-center">{serverError}</p>
+                    <div className="text-sm text-destructive font-medium text-center space-y-1">
+                      {serverError.split('\n').map((err, i) => (
+                        <p key={i}>{err}</p>
+                      ))}
+                    </div>
                   )}
                   <Button onClick={nextStep} className="w-full h-12 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.02] transition-transform">
                     Continue
@@ -314,7 +397,11 @@ export default function SignupPage() {
                   )}
 
                   {serverError && (
-                    <p className="text-sm text-destructive font-medium text-center mt-2 p-2 bg-destructive/10 rounded-lg border border-destructive/20">{serverError}</p>
+                    <div className="text-sm text-destructive font-medium text-center mt-2 p-2 bg-destructive/10 rounded-lg border border-destructive/20 space-y-1">
+                      {serverError.split('\n').map((err, i) => (
+                        <p key={i}>{err}</p>
+                      ))}
+                    </div>
                   )}
 
                   <Button type="button" onClick={nextStep} className="w-full h-12 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.02] transition-transform mt-4">
@@ -346,7 +433,11 @@ export default function SignupPage() {
                   )}
 
                   {serverError && (
-                    <p className="text-sm text-destructive font-medium text-center mt-2 p-2 bg-destructive/10 rounded-lg border border-destructive/20">{serverError}</p>
+                    <div className="text-sm text-destructive font-medium text-center mt-2 p-2 bg-destructive/10 rounded-lg border border-destructive/20 space-y-1">
+                      {serverError.split('\n').map((err, i) => (
+                        <p key={i}>{err}</p>
+                      ))}
+                    </div>
                   )}
 
                   <Button type="submit" disabled={isLoading} className="w-full h-12 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.02] transition-transform mt-4">

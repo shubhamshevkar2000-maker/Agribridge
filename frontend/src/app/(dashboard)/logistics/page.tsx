@@ -25,7 +25,7 @@ export default function LogisticsDashboard() {
   useEffect(() => {
     const fetchPools = async () => {
       try {
-        const token = localStorage.getItem('token') || localStorage.getItem('agribridge_token');
+        const token = localStorage.getItem('token');
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/deliveries/pool`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -47,10 +47,10 @@ export default function LogisticsDashboard() {
   const pools = dashboardData || [];
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 max-w-[1600px] mx-auto h-[calc(100vh-8rem)]">
+    <div className="flex flex-col lg:flex-row gap-8 max-w-[1600px] mx-auto">
       
       {/* Left Column: Itinerary */}
-      <div className="w-full lg:w-96 shrink-0 flex flex-col gap-6 h-full overflow-y-auto pr-2 pb-8">
+      <div className="w-full lg:w-96 shrink-0 flex flex-col gap-6 pr-2 pb-8">
         
         <Card className="glass-card border-border/50">
           <CardHeader className="pb-4">
@@ -61,14 +61,14 @@ export default function LogisticsDashboard() {
           </CardHeader>
           <CardContent className="space-y-6">
             
-            {stops.length > 0 && (
+            {pools.length > 0 && (
               <div className="flex items-center gap-4 p-3 bg-secondary/50 rounded-xl border border-border/50">
                 <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
                   <Truck className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="font-semibold text-sm">Vehicle: {dashboardData?.vehicleId?.registrationNumber || 'Unassigned'}</div>
-                  <div className="text-xs text-muted-foreground">Driver: {dashboardData?.driverId?.name || 'Unassigned'}</div>
+                  <div className="font-semibold text-sm">Vehicle: Pooled Truck</div>
+                  <div className="text-xs text-muted-foreground">Driver: Route Assigned</div>
                 </div>
               </div>
             )}
@@ -120,7 +120,7 @@ export default function LogisticsDashboard() {
       </div>
 
       {/* Right Column: Interactive Map Mock */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden rounded-3xl border border-border/50 bg-secondary/20 relative">
+      <div className="flex-1 flex flex-col min-h-[400px] lg:min-h-[500px] overflow-hidden rounded-3xl border border-border/50 bg-secondary/20 relative">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cartographer.png')] opacity-20 dark:opacity-5 mix-blend-overlay pointer-events-none" />
         
         {pools.length > 0 ? (

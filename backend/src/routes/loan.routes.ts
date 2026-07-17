@@ -61,4 +61,37 @@ router.get('/', protect, async (req: any, res) => {
   }
 });
 
+// PUT /api/loans/:id
+router.put('/:id', protect, async (req: any, res) => {
+  try {
+    const { status, amountApproved } = req.body;
+    if (req.user.role !== 'bank') {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+
+    const loan = await Loan.findById(req.params.id);
+    if (!loan) {
+      return res.status(404).json({ success: false, message: 'Loan not found' });
+    }
+
+    if (loan.bankId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    if (status) {
+      loan.status = status;
+    }
+    if (amountApproved !== undefined) {
+      loan.amountApproved = amountApproved;
+    } else if (status === 'approved' && !loan.amountApproved) {
+      loan.amountApproved = loan.amountRequested;
+    }
+
+    await loan.save();
+    res.json({ success: true, data: loan });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router;

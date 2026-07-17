@@ -39,7 +39,7 @@ export default function InventoryPage() {
   const fetchCrops = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('agribridge_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('token');
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/crops/inventory`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -66,7 +66,7 @@ export default function InventoryPage() {
     setError('');
     
     try {
-      const token = localStorage.getItem('agribridge_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('token');
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/crops`, {
         method: 'POST',
         headers: {
@@ -110,7 +110,7 @@ export default function InventoryPage() {
     if (!confirm('Are you sure you want to delete this crop?')) return;
     
     try {
-      const token = localStorage.getItem('agribridge_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('token');
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/crops/${id}`, {
         method: 'DELETE',
         headers: {

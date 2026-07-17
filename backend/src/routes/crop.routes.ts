@@ -40,7 +40,7 @@ router.post('/', protect, async (req: any, res) => {
     res.status(201).json({ success: true, data: crop });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ success: false, errors: (error as any).errors });
+      return res.status(400).json({ success: false, errors: error.issues });
     }
     res.status(500).json({ success: false, message: error.message });
   }
@@ -64,7 +64,7 @@ router.put('/:id', protect, async (req: any, res) => {
     res.json({ success: true, data: crop });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ success: false, errors: (error as any).errors });
+      return res.status(400).json({ success: false, errors: error.issues });
     }
     res.status(500).json({ success: false, message: error.message });
   }
@@ -96,7 +96,7 @@ router.get('/', protect, async (req, res) => {
     if (isOrganic === 'true') query.isOrganic = true;
     if (search) query.name = { $regex: search, $options: 'i' };
     
-    const crops = await Crop.find(query).populate('farmerId', 'name').sort({ createdAt: -1 });
+    const crops = await Crop.find(query).populate('farmerId', 'name location trustScore').sort({ createdAt: -1 });
     res.json({ success: true, data: crops });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

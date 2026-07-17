@@ -23,13 +23,6 @@ const askKrishiSathi = async (prompt: string) => {
   return `Based on current market data and your region, ${prompt.includes('price') ? 'the suggested price for Tomatoes is ₹2,200/qtl, up 5% from last week.' : 'heavy rainfall is expected in 2 days. Consider delaying your harvest.'}`;
 };
 
-const kpis = [
-  { title: "Today's Revenue", value: "₹24,500", icon: IndianRupee, trend: "+12%", trendUp: true },
-  { title: "Active Auctions", value: "3", icon: Gavel, trend: "+1 new", trendUp: true },
-  { title: "Trust Score", value: "850", icon: ShieldCheck, trend: "Excellent", trendUp: true },
-  { title: "Credit Score", value: "720", icon: TrendingUp, trend: "+15 pts", trendUp: true },
-];
-
 export default function FarmerDashboard() {
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -41,7 +34,7 @@ export default function FarmerDashboard() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const token = localStorage.getItem('agribridge_token');
+        const token = localStorage.getItem('token');
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/dashboard/farmer`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -60,7 +53,7 @@ export default function FarmerDashboard() {
 
     const fetchWeather = async () => {
       try {
-        const token = localStorage.getItem('agribridge_token');
+        const token = localStorage.getItem('token');
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/weather/farmer`, {
           headers: {
             'Authorization': `Bearer ${token}`

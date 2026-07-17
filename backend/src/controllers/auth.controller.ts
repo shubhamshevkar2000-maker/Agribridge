@@ -28,14 +28,22 @@ export const signup = async (req: Request, res: Response) => {
   try {
     const validatedData = signupSchema.parse(req.body);
     
-    // Check if user exists
-    const query = validatedData.email 
-      ? { email: validatedData.email } 
-      : { phone: validatedData.phone };
-      
-    const userExists = await User.findOne(query);
-    if (userExists) {
-      return res.status(400).json({ success: false, message: 'User already exists' });
+    // Check if user exists by either email or phone (whichever is provided)
+    const queryList = [];
+    if (validatedData.email) queryList.push({ email: validatedData.email });
+    if (validatedData.phone) queryList.push({ phone: validatedData.phone });
+
+    if (queryList.length > 0) {
+      const userExists = await User.findOne({ $or: queryList });
+      if (userExists) {
+        if (validatedData.email && userExists.email === validatedData.email) {
+          return res.status(400).json({ success: false, message: 'Email is already registered' });
+        }
+        if (validatedData.phone && userExists.phone === validatedData.phone) {
+          return res.status(400).json({ success: false, message: 'Phone number is already registered' });
+        }
+        return res.status(400).json({ success: false, message: 'User already exists' });
+      }
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -95,7 +103,7 @@ export const signup = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Signup error:', error);
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ success: false, errors: (error as any).errors });
+      return res.status(400).json({ success: false, errors: error.issues });
     }
     res.status(500).json({ success: false, message: error.message || 'Internal server error' });
   }

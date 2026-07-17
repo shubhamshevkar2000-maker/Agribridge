@@ -24,19 +24,80 @@ interface Message {
   timestamp: Date;
 }
 
+const translations: Record<string, any> = {
+  en: {
+    title: 'KrishiSathi AI',
+    subtitle: 'Powered by Groq',
+    suggestedQueries: 'Suggested Queries',
+    placeholder: 'Ask about crop prices, weather, or farming advice...',
+    warning: 'KrishiSathi AI can make mistakes. Consider verifying critical information.',
+    welcome: 'Namaste! I am KrishiSathi, your personal AI farming assistant. How can I help you today?',
+    suggestions: [
+      { label: 'Check Crop Prices', query: 'What is the price of Tomatoes in Nashik?', icon: TrendingUp },
+      { label: 'Weather Forecast', query: 'Will it rain this week?', icon: ThermometerSun },
+      { label: 'Pest Identification', query: 'My leaves have brown spots, what disease is it?', icon: Bug },
+    ],
+  },
+  hi: {
+    title: 'कृषिसार्थी AI',
+    subtitle: 'Groq द्वारा संचालित',
+    suggestedQueries: 'सुझाए गए प्रश्न',
+    placeholder: 'फसल की कीमतों, मौसम या खेती की सलाह के बारे में पूछें...',
+    warning: 'कृषिसार्थी AI गलतियां कर सकता है। महत्वपूर्ण जानकारी सत्यापित करने पर विचार करें।',
+    welcome: 'नमस्ते! मैं कृषिसार्थी हूँ, आपका व्यक्तिगत AI खेती सहायक। आज मैं आपकी क्या सहायता कर सकता हूँ?',
+    suggestions: [
+      { label: 'फसल की कीमतें देखें', query: 'नासिक में टमाटर की कीमत क्या है?', icon: TrendingUp },
+      { label: 'मौसम का पूर्वानुमान', query: 'क्या इस सप्ताह बारिश होगी?', icon: ThermometerSun },
+      { label: 'कीट की पहचान', query: 'मेरी पत्तियों पर भूरे धब्बे हैं, यह कौन सी बीमारी है?', icon: Bug },
+    ],
+  },
+  mr: {
+    title: 'कृषिसार्थी AI',
+    subtitle: 'Groq द्वारे समर्थित',
+    suggestedQueries: 'सुचवलेले प्रश्न',
+    placeholder: 'पिकांच्या किमती, हवामान किंवा शेतीच्या सल्ल्याबद्दल विचारा...',
+    warning: 'कृषिसार्थी AI चुका करू शकतात. महत्त्वाच्या माहितीची पडताळणी करण्याचा विचार करा.',
+    welcome: 'नमस्ते! मी कृषिसार्थी आहे, तुमचा वैयक्तिक AI शेती सहाय्यक. आज मी तुम्हाला कशी मदत करू शकतो?',
+    suggestions: [
+      { label: 'पिकांच्या किमती तपासा', query: 'नाशिकमध्ये टोमॅटोची किंमत काय आहे?', icon: TrendingUp },
+      { label: 'हवामान अंदाज', query: 'या आठवड्यात पाऊस पडेल का?', icon: ThermometerSun },
+      { label: 'कीड ओळखणे', query: 'माझ्या पानांवर तपकिरी ठिपके आहेत, हा कोणता रोग आहे?', icon: Bug },
+    ],
+  }
+};
+
 export default function KrishiSathiAIPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'ai',
-      text: 'Namaste! I am KrishiSathi, your personal AI farming assistant. How can I help you today?',
-      timestamp: new Date()
+  const [language, setLanguage] = useState<'en' | 'hi' | 'mr'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('lang');
+      if (saved === 'hi' || saved === 'mr' || saved === 'en') {
+        return saved;
+      }
     }
-  ]);
+    return 'en';
+  });
+
+  const t = translations[language];
+
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize welcome message based on language if messages are empty
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: 'welcome',
+          sender: 'ai',
+          text: t.welcome,
+          timestamp: new Date()
+        }
+      ]);
+    }
+  }, [language]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,6 +106,11 @@ export default function KrishiSathiAIPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
+
+  const handleLanguageChange = (lang: 'en' | 'hi' | 'mr') => {
+    setLanguage(lang);
+    localStorage.setItem('lang', lang);
+  };
 
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
@@ -55,30 +121,34 @@ export default function KrishiSathiAIPage() {
     setIsTyping(true);
 
     try {
-      // In a real implementation, we fetch from /api/ai/chat
-      // We will simulate the same logic as the backend mock for immediate frontend UX
-      await new Promise(r => setTimeout(r, 1200));
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ prompt: text, language })
+      });
+      const data = await res.json();
       
-      let aiText = "I can assist you with real-time crop pricing, local weather patterns, and soil management.";
-      if (text.toLowerCase().includes('price')) {
-        aiText = "Based on current APMC data for your region, Tomato prices are trending upwards by 5%. Expected clearing price is ₹2,300/qtl.";
-      } else if (text.toLowerCase().includes('rain') || text.toLowerCase().includes('weather')) {
-        aiText = "Meteorological data suggests heavy rainfall in your district over the next 48 hours. It is advisable to delay any open-field harvesting.";
-      } else if (text.toLowerCase().includes('disease') || text.toLowerCase().includes('leaf')) {
-        aiText = "Yellowing leaves with brown spots on tomatoes often indicate Early Blight. Consider applying a copper-based fungicide and improving air circulation around the plants.";
+      if (data.success) {
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          sender: 'ai',
+          text: data.data.response,
+          timestamp: new Date()
+        }]);
+      } else {
+        throw new Error(data.message || 'Failed to get response');
       }
-
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        sender: 'ai',
-        text: aiText,
-        timestamp: new Date()
-      }]);
     } catch (error) {
       setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
+        id: Date.now().toString(),
         sender: 'ai',
-        text: "I'm having trouble connecting to the network right now. Please try again later.",
+        text: language === 'en' ? "I'm having trouble connecting to the network right now. Please try again later." : 
+              language === 'hi' ? "मुझे अभी नेटवर्क से कनेक्ट करने में समस्या हो रही है। कृपया बाद में पुनः प्रयास करें।" :
+              "मला आत्ता नेटवर्कशी कनेक्ट करण्यात अडचण येत आहे. कृपया नंतर पुन्हा प्रयत्न करा.",
         timestamp: new Date()
       }]);
     } finally {
@@ -88,40 +158,56 @@ export default function KrishiSathiAIPage() {
 
   const handleVoice = async () => {
     setIsListening(true);
-    // Mock Voice recognition delay
-    await new Promise(r => setTimeout(r, 2500));
+    await new Promise(r => setTimeout(r, 2000));
     setIsListening(false);
-    handleSend("What is the current market price for tomatoes?");
+    const query = language === 'en' ? "Will it rain this week?" : 
+                  language === 'hi' ? "क्या इस सप्ताह बारिश होगी?" : 
+                  "या आठवड्यात पाऊस पडेल का?";
+    handleSend(query);
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] max-w-5xl mx-auto gap-6">
+    <div className="flex flex-col h-[calc(100vh-12rem)] lg:h-[calc(100vh-14rem)] max-w-5xl mx-auto gap-6 overflow-hidden">
       
       <div className="flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" /> KrishiSathi AI
+            <Sparkles className="w-6 h-6 text-primary" /> {t.title}
           </h1>
-          <p className="text-muted-foreground">Powered by Groq</p>
+          <p className="text-muted-foreground">{t.subtitle}</p>
         </div>
         <div className="flex gap-2">
-          <Badge variant="outline" className="bg-background">English</Badge>
-          <Badge variant="outline" className="bg-background text-muted-foreground">हिंदी</Badge>
-          <Badge variant="outline" className="bg-background text-muted-foreground">मराठी</Badge>
+          <Badge 
+            variant="outline" 
+            className={`cursor-pointer transition-colors ${language === 'en' ? 'bg-primary text-white border-primary' : 'bg-background text-muted-foreground'}`}
+            onClick={() => handleLanguageChange('en')}
+          >
+            English
+          </Badge>
+          <Badge 
+            variant="outline" 
+            className={`cursor-pointer transition-colors ${language === 'hi' ? 'bg-primary text-white border-primary' : 'bg-background text-muted-foreground'}`}
+            onClick={() => handleLanguageChange('hi')}
+          >
+            हिंदी
+          </Badge>
+          <Badge 
+            variant="outline" 
+            className={`cursor-pointer transition-colors ${language === 'mr' ? 'bg-primary text-white border-primary' : 'bg-background text-muted-foreground'}`}
+            onClick={() => handleLanguageChange('mr')}
+          >
+            मराठी
+          </Badge>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 overflow-hidden">
         
         {/* Quick Prompts Sidebar */}
         <div className="hidden lg:flex w-64 flex-col gap-4 overflow-y-auto shrink-0">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Suggested Queries</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t.suggestedQueries}</h3>
           
-          {[
-            { label: 'Check Crop Prices', query: 'What is the price of Tomatoes in Nashik?', icon: TrendingUp },
-            { label: 'Weather Forecast', query: 'Will it rain this week?', icon: ThermometerSun },
-            { label: 'Pest Identification', query: 'My leaves have brown spots, what disease is it?', icon: Bug },
-          ].map((suggestion, i) => (
+          {t.suggestions.map((suggestion: any, i: number) => (
             <button
               key={i}
               onClick={() => handleSend(suggestion.query)}
@@ -164,7 +250,7 @@ export default function KrishiSathiAIPage() {
                         ? 'bg-primary text-primary-foreground rounded-tr-sm' 
                         : 'glass border border-border/50 bg-secondary/50 rounded-tl-sm text-foreground'
                     }`}>
-                      <p className="text-[15px] leading-relaxed">{msg.text}</p>
+                      <p className="text-[15px] leading-relaxed whitespace-pre-line">{msg.text}</p>
                     </div>
                     <span className="text-xs text-muted-foreground px-1">
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -207,7 +293,7 @@ export default function KrishiSathiAIPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend(input)}
-                placeholder="Ask about crop prices, weather, or farming advice..."
+                placeholder={t.placeholder}
                 className="h-12 bg-background border-border/50 rounded-xl pr-12 focus-visible:ring-primary/50 text-base"
                 disabled={isListening}
               />
@@ -222,7 +308,7 @@ export default function KrishiSathiAIPage() {
               </Button>
             </div>
             <div className="text-center mt-2 text-xs text-muted-foreground">
-              KrishiSathi AI can make mistakes. Consider verifying critical information.
+              {t.warning}
             </div>
           </div>
         </Card>

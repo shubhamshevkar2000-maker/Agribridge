@@ -155,7 +155,7 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
   if (!auction) return <div className="p-8 text-center text-destructive">Auction not found</div>;
 
   return (
-    <div className="max-w-6xl mx-auto h-[calc(100vh-8rem)] flex flex-col gap-6">
+    <div className="max-w-6xl mx-auto flex flex-col gap-6">
       
       <div className="flex items-center justify-between shrink-0">
         <Link href="/farmer/auctions" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
@@ -168,10 +168,10 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
         )}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+      <div className="flex flex-col lg:flex-row gap-6">
         
         {/* Left Side - Details & Action */}
-        <div className="w-full lg:w-2/3 flex flex-col gap-6 overflow-y-auto pr-2 pb-4">
+        <div className="w-full lg:w-2/3 flex flex-col gap-6 pb-4">
           
           <Card className="glass-card border-border/50">
             <CardContent className="p-6">
