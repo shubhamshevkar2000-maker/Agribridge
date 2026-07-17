@@ -1,121 +1,78 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { User, Mail, Phone, MapPin, ShieldCheck, Landmark, CheckCircle2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-
-export default function ProfilePage() {
-  const [profile, setProfile] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const json = await res.json();
-        if (json.success) {
-          setProfile(json.data);
-        }
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
-
-  if (isLoading) {
-    return <div className="p-8 text-center">Loading profile...</div>;
-  }
-
-  if (!profile) {
-    return <div className="p-8 text-center text-destructive">Failed to load profile. Please log in again.</div>;
-  }
-
+export default function PlaceholderPage() {
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-3xl">
-          {profile.name?.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <h1 className="text-3xl font-heading font-bold">{profile.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge className="uppercase text-xs">{profile.role}</Badge>
-            <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/5 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> KYC Verified
-            </Badge>
-          </div>
-        </div>
+    <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center">
+      <div className="p-8 glass-card border-border/50 rounded-2xl max-w-md w-full shadow-lg">
+        <h2 className="text-2xl font-heading font-bold mb-2">Coming Soon</h2>
+        <p className="text-muted-foreground">
+          This feature is currently under development. Please check back later in the next phase!
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="glass-card border-border/50">
-          <CardHeader>
-            <CardTitle>Account Details</CardTitle>
-            <CardDescription>Personal information associated with your account</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Mail className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <div className="text-xs text-muted-foreground">Email Address</div>
-                <div className="text-sm font-medium">{profile.email || 'N/A'}</div>
-              </div>
+      <Card>
+        <CardContent className="p-8">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <Avatar className="w-24 h-24">
+              <AvatarFallback className="text-3xl bg-primary text-white">
+                
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold">Express Transit Pvt Ltd</h2>
+
+              <Badge className="mt-2">Verified Logistics Partner</Badge>
+
+              <p className="text-muted-foreground mt-3">
+                Delivering agricultural produce efficiently across Maharashtra.
+              </p>
             </div>
+
+            <Button>Edit Profile</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-lg">Contact Information</h3>
+
             <div className="flex items-center gap-3">
-              <Phone className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <div className="text-xs text-muted-foreground">Phone Number</div>
-                <div className="text-sm font-medium">{profile.phone || 'N/A'}</div>
-              </div>
+              <Mail size={18} />
+              support@expresstransit.com
             </div>
-            {profile.location && (
-              <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <div className="text-xs text-muted-foreground">Location Coordinates</div>
-                  <div className="text-sm font-medium">
-                    {profile.location.coordinates?.join(', ') || 'N/A'}
-                  </div>
-                </div>
-              </div>
-            )}
+
+            <div className="flex items-center gap-3">
+              <Phone size={18} />
+              +91 9876543210
+            </div>
+
+            <div className="flex items-center gap-3">
+              <MapPin size={18} />
+              Pune, Maharashtra
+            </div>
           </CardContent>
         </Card>
 
-        {(profile.role === 'farmer' || profile.role === 'buyer') && (
-          <Card className="glass-card border-border/50">
-            <CardHeader>
-              <CardTitle>Financial & Trust Scoring</CardTitle>
-              <CardDescription>Metrics powered by AgriBridge ledger</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="w-5 h-5 text-primary" />
-                <div>
-                  <div className="text-xs text-muted-foreground">Global Trust Score</div>
-                  <div className="text-lg font-bold text-primary">{profile.trustScore || 300} / 1000</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Landmark className="w-5 h-5 text-purple-500" />
-                <div>
-                  <div className="text-xs text-muted-foreground">AgriCredit Score</div>
-                  <div className="text-lg font-bold text-purple-500">{profile.creditScore || 300} / 900</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-lg">Fleet Information</h3>
+
+            <div className="flex items-center gap-3">
+              <Truck size={18} />
+              Total Vehicles : 12
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Building2 size={18} />
+              Company ID : LOG12345
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Badge>Active</Badge>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
