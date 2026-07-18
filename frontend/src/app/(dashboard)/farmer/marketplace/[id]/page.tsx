@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, ShieldCheck, Leaf, Heart, ShoppingBag, Info, Truck } from 'lucide-react';
+import { getCropImageUrl } from '@/utils/cropImages';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -142,14 +143,12 @@ export default function CropDetailPage({ params }: { params: Promise<{ id: strin
           {/* Left Column - Image Placeholder */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <div className="relative rounded-3xl overflow-hidden aspect-[4/3] glass-card border border-border/50 bg-muted flex items-center justify-center">
-              {crop.images && crop.images.length > 0 ? (
-                <img src={crop.images[0]} alt={crop.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full w-full bg-secondary/30 text-muted-foreground">
-                  <ShoppingBag className="w-12 h-12 mb-2 opacity-40" />
-                  <span className="text-sm font-semibold uppercase tracking-wider font-heading">No Image</span>
-                </div>
-              )}
+              <img 
+                src={(crop.images && crop.images.length > 0 && !crop.images[0].includes('placehold.co')) ? crop.images[0] : getCropImageUrl(crop.name)} 
+                alt={crop.name} 
+                className="w-full h-full object-cover" 
+                loading="lazy" 
+              />
               <div className="absolute top-4 left-4 flex gap-2">
                 {crop.isOrganic && <Badge className="bg-primary shadow-lg backdrop-blur-md px-3 py-1 text-sm"><Leaf className="w-3 h-3 mr-1" /> Organic</Badge>}
               </div>

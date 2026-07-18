@@ -8,39 +8,40 @@ export const updateDeliveryStatus = async (
   status: 'pending' | 'in_transit' | 'delivered', 
   currentLocation?: { lat: number; lng: number }
 ) => {
-  const delivery = await Delivery.findById(deliveryId).populate('orderIds');
+  const delivery = await Delivery.findById(deliveryId).populate('orderId');
   if (!delivery) throw new Error('Delivery not found');
 
-  delivery.status = status;
+  const mappedStatus = status === 'pending' ? 'accepted' : status;
+  delivery.status = mappedStatus as any;
   if (currentLocation) {
-    delivery.currentLocation = currentLocation;
+    delivery.route.push({
+      type: 'Point',
+      coordinates: [currentLocation.lng, currentLocation.lat]
+    });
   }
   await delivery.save();
 
-  // If we have associated orders, we should update their status too and notify
-  if (delivery.orderIds && delivery.orderIds.length > 0) {
-    for (const orderDoc of delivery.orderIds) {
-      const order = await Order.findById(orderDoc._id);
-      if (order) {
-        order.deliveryStatus = status;
-        await order.save();
+  if (delivery.orderId) {
+    const order = await Order.findById(delivery.orderId);
+    if (order) {
+      order.deliveryStatus = status;
+      await order.save();
 
-        // Notify Buyer
-        await createNotification({
-          userId: order.buyerId.toString(),
-          type: 'delivery_update',
-          title: `Delivery Update: ${status.replace('_', ' ').toUpperCase()}`,
-          message: `Your order for ${order.cropId} is now ${status.replace('_', ' ')}.`,
-        });
+      // Notify Buyer
+      await createNotification({
+        userId: order.buyerId.toString(),
+        type: 'delivery_update',
+        title: `Delivery Update: ${status.toUpperCase()}`,
+        message: `Your order for ${order.cropId} is now ${status}.`,
+      });
 
-        // Notify Farmer
-        await createNotification({
-          userId: order.farmerId.toString(),
-          type: 'delivery_update',
-          title: `Logistics Update: ${status.replace('_', ' ').toUpperCase()}`,
-          message: `The logistics partner has marked the pickup/delivery as ${status.replace('_', ' ')}.`,
-        });
-      }
+      // Notify Farmer
+      await createNotification({
+        userId: order.farmerId.toString(),
+        type: 'delivery_update',
+        title: `Logistics Update: ${status.toUpperCase()}`,
+        message: `The logistics partner has marked the pickup/delivery as ${status}.`,
+      });
     }
   }
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Gavel, Clock, ArrowRight } from 'lucide-react';
+import { Gavel, Clock, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,10 +27,7 @@ interface Auction {
   status: string;
 }
 
-import { api } from '@/lib/api';
-import { AlertCircle, RefreshCw } from 'lucide-react';
-
-export default function AuctionsPage() {
+export default function BuyerAuctionsPage() {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +36,11 @@ export default function AuctionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.get('/api/auctions');
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/auctions', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
       if (data.success) {
         setAuctions(data.data);
       } else {
@@ -47,7 +48,7 @@ export default function AuctionsPage() {
       }
     } catch (err: any) {
       console.error('Failed to fetch auctions:', err);
-      setError(err.message || 'Unable to connect to the server. Please verify network or backend availability.');
+      setError(err.message || 'Unable to connect to the server.');
     } finally {
       setLoading(false);
     }
@@ -58,13 +59,13 @@ export default function AuctionsPage() {
   }, []);
 
   return (
-    <div className="max-w-[1600px] mx-auto p-6">
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-[1600px] mx-auto p-4 md:p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-heading font-bold flex items-center gap-3">
             <Gavel className="w-8 h-8 text-primary" /> Live Auctions
           </h1>
-          <p className="text-muted-foreground mt-2">Bid on premium crops in real-time</p>
+          <p className="text-muted-foreground mt-1">Bid on premium crops in real-time</p>
         </div>
       </div>
 
@@ -82,9 +83,9 @@ export default function AuctionsPage() {
           <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
         </div>
       ) : auctions.length === 0 ? (
-        <div className="glass-card p-12 text-center rounded-3xl border-border/50">
+        <div className="glass-card p-12 text-center rounded-3xl border border-border/50 bg-secondary/10">
           <Gavel className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-          <h3 className="text-xl font-heading font-bold mb-2">No Active Auctions</h3>
+          <h3 className="text-xl font-heading font-bold mb-2">No active auctions.</h3>
           <p className="text-muted-foreground">Check back later for new live listings.</p>
         </div>
       ) : (
@@ -94,34 +95,36 @@ export default function AuctionsPage() {
               key={auction._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: i * 0.05 }}
             >
-              <Link href={`./auctions/${auction._id}`}>
-                <Card className="glass-card hover:shadow-lg transition-all border-border/50 group h-full">
-                  <div className="relative h-48 bg-muted flex items-center justify-center overflow-hidden">
-                    <span className="text-muted-foreground/30 font-bold text-4xl uppercase">
-                      {auction.cropId?.category}
+              <Link href={`/buyer/auctions/${auction._id}`}>
+                <Card className="glass-card hover:shadow-lg transition-all border border-border/50 group h-full flex flex-col justify-between overflow-hidden rounded-2xl">
+                  <div className="relative h-40 bg-secondary/30 flex items-center justify-center overflow-hidden">
+                    <span className="text-muted-foreground/30 font-bold text-3xl uppercase">
+                      {auction.cropId?.category || 'Crop'}
                     </span>
-                    <Badge className="absolute top-4 right-4 bg-red-500/90 hover:bg-red-500 animate-pulse">
-                      <span className="w-2 h-2 rounded-full bg-white mr-2 animate-ping" /> LIVE
+                    <Badge className="absolute top-4 right-4 bg-red-500 text-white animate-pulse">
+                      LIVE
                     </Badge>
                   </div>
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold font-heading mb-1">{auction.cropId?.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {auction.cropId?.quantity} {auction.cropId?.unit} • Farmer: {auction.farmerId?.name}
-                    </p>
-                    <div className="flex justify-between items-end mt-4 pt-4 border-t border-border/50">
+                  <CardContent className="p-5 space-y-4">
+                    <div>
+                      <h3 className="text-lg font-bold font-heading group-hover:text-primary transition-colors">{auction.cropId?.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {auction.cropId?.quantity} {auction.cropId?.unit} • Farmer: {auction.farmerId?.name}
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-end pt-4 border-t border-border/30">
                       <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Current Bid</p>
-                        <p className="text-2xl font-bold text-primary">₹{auction.currentHighestBid || auction.startingBid}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Current Bid</p>
+                        <p className="text-xl font-bold text-primary">₹{auction.currentHighestBid || auction.startingBid}</p>
                       </div>
                       <div className="text-right">
-                        <div className="flex items-center text-sm text-orange-500 font-medium mb-1 gap-1">
-                          <Clock className="w-4 h-4" /> Ends soon
+                        <div className="flex items-center text-xs text-orange-500 font-semibold mb-2 gap-1 bg-orange-500/10 px-2 py-1 rounded">
+                          <Clock className="w-3.5 h-3.5" /> Ends soon
                         </div>
-                        <Button size="sm" variant="outline" className="group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                          Join <ArrowRight className="w-4 h-4 ml-1" />
+                        <Button size="sm" variant="outline" className="group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all rounded-lg">
+                          Join <ArrowRight className="w-3.5 h-3.5 ml-1" />
                         </Button>
                       </div>
                     </div>

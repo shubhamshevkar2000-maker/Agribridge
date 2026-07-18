@@ -5,6 +5,7 @@ import { getIO } from '../config/socket';
 import { createNotification } from './notification.service';
 import { Order } from '../models/Order';
 import { User } from '../models/User';
+import { Crop } from '../models/Crop';
 
 /**
  * Places a bid atomically using a Redis Lua script.
@@ -62,6 +63,18 @@ export const placeBidAtomic = async (auctionId: string, buyerId: string, bidAmou
       return { bidderId: parts[0], bidderName: parts[1], amount: parseInt(parts[2], 10) };
     });
 
+    // Sync bid to MongoDB
+    await Auction.findByIdAndUpdate(auctionId, {
+      $push: {
+        bids: {
+          bidderId: new Types.ObjectId(buyerId),
+          amount: bidAmount,
+          timestamp: new Date()
+        }
+      },
+      currentHighestBid: bidAmount
+    });
+
     // Broadcast to all clients in the auction room
     const io = getIO();
     io.to(`auction_${auctionId}`).emit('auction:update', {
@@ -92,8 +105,17 @@ export const completeAuction = async (auctionId: string) => {
   if (highestBidStr && highestBidderStr) {
     auction.currentHighestBid = parseInt(highestBidStr, 10);
     auction.winnerId = new Types.ObjectId(highestBidderStr) as any;
-    auction.status = 'closed';
+    auction.status = 'sold';
     await auction.save();
+
+    // Update Crop status to sold if remaining quantity is 0
+    if (auction.cropId) {
+      const crop = await Crop.findById(auction.cropId);
+      if (crop && crop.quantity === 0) {
+        crop.status = 'sold';
+        await crop.save();
+      }
+    }
 
     // Notify Winner
     await createNotification({
@@ -110,15 +132,17 @@ export const completeAuction = async (auctionId: string) => {
       title: 'Auction Completed',
       message: `Your crop auction ended with a winning bid of ₹${highestBidStr}/qtl.`,
     });
+
     // Create Order for winner
     if (auction.cropId) {
       const crop = auction.cropId as any;
+      const orderQty = auction.quantity || crop.quantity;
       await Order.create({
         buyerId: highestBidderStr,
         farmerId: (auction.farmerId as any)._id,
         cropId: crop._id,
-        quantity: crop.quantity,
-        totalAmount: crop.quantity * auction.currentHighestBid,
+        quantity: orderQty,
+        totalAmount: orderQty * auction.currentHighestBid,
         paymentStatus: 'pending',
         deliveryStatus: 'pending'
       });
@@ -135,6 +159,18 @@ export const completeAuction = async (auctionId: string) => {
     auction.status = 'cancelled';
     await auction.save();
     
+    // Release locked quantity back to the crop
+    if (auction.cropId) {
+      const crop = await Crop.findById(auction.cropId);
+      if (crop) {
+        crop.quantity += auction.quantity || 0;
+        if (crop.status === 'in_auction') {
+          crop.status = 'listed';
+        }
+        await crop.save();
+      }
+    }
+
     // Notify Farmer
     await createNotification({
       userId: (auction.farmerId as any)._id.toString(),

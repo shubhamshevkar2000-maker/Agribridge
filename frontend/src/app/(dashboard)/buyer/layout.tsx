@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -16,24 +16,26 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Menu
-,
-  LogOut
+  Menu,
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
+import { DemoBanner } from '@/components/DemoBanner';
 
 const navItems = [
   { name: 'Dashboard', href: '/buyer', icon: LayoutDashboard },
-  { name: 'Browse Farmers', href: '/buyer/farmers', icon: Search },
   { name: 'Marketplace', href: '/buyer/marketplace', icon: Store },
+  { name: 'Search Crops', href: '/buyer/search', icon: Search },
+  { name: 'Wishlist', href: '/buyer/wishlist', icon: Heart },
+  { name: 'My Orders', href: '/buyer/orders', icon: ShoppingBag },
+  { name: 'My Bids', href: '/buyer/bids', icon: Gavel },
   { name: 'Auctions', href: '/buyer/auctions', icon: Gavel },
-  { name: 'Favorites', href: '/buyer/favorites', icon: Heart },
-  { name: 'Orders', href: '/buyer/orders', icon: ShoppingBag },
-  { name: 'Invoices', href: '/buyer/invoices', icon: FileText },
+  { name: 'AI Assistant', href: '/buyer/ai', icon: MessageSquare },
 ];
 
 export default function BuyerLayout({
@@ -44,7 +46,33 @@ export default function BuyerLayout({
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [wishlistCount, setWishlistCount] = useState(0);
   const pathname = usePathname();
+
+  const fetchWishlistCount = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch('/api/wishlist', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setWishlistCount(data.data.length);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchWishlistCount();
+
+    window.addEventListener('wishlist-updated', fetchWishlistCount);
+    return () => {
+      window.removeEventListener('wishlist-updated', fetchWishlistCount);
+    };
+  }, []);
 
   const Sidebar = ({ isMobile = false }) => (
     <div className={`flex flex-col h-full bg-secondary/20 border-r border-border/50 glass-card rounded-none lg:rounded-r-3xl overflow-hidden transition-all duration-300 ${!isMobile && (collapsed ? 'w-20' : 'w-64')}`}>
@@ -74,6 +102,7 @@ export default function BuyerLayout({
       <nav className="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-1 relative">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
+          const isWishlist = item.name === 'Wishlist';
           return (
             <Link key={item.name} href={item.href} onClick={() => setMobileOpen(false)}>
               <div className={`relative flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'}`}>
@@ -85,7 +114,12 @@ export default function BuyerLayout({
                   />
                 )}
                 <item.icon size={20} className="shrink-0" />
-                {!collapsed && <span className="font-medium text-sm truncate">{item.name}</span>}
+                {!collapsed && <span className="font-medium text-sm truncate flex-1">{item.name}</span>}
+                {isWishlist && wishlistCount > 0 && (
+                  <span className="bg-primary text-white text-[10px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shrink-0 shadow-md">
+                    {wishlistCount}
+                  </span>
+                )}
               </div>
             </Link>
           );
@@ -95,7 +129,7 @@ export default function BuyerLayout({
       <div className="p-4 border-t border-border/50">
         <Link href="/buyer/profile" onClick={() => setMobileOpen(false)}>
           <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer">
-            <Avatar className="w-9 h-9 border border-border">
+            <Avatar className={`w-9 h-9 border ${user?.isDemoAccount ? 'border-amber-500' : 'border-border'}`}>
               <AvatarFallback className="bg-primary/20 text-primary font-semibold">
                 {user?.name?.substring(0, 2).toUpperCase() || 'BU'}
               </AvatarFallback>
@@ -103,7 +137,7 @@ export default function BuyerLayout({
             {!collapsed && (
               <div className="flex flex-col truncate">
                 <span className="text-sm font-semibold truncate text-foreground">{user?.name || 'Loading...'}</span>
-                <span className="text-xs text-muted-foreground truncate">Buyer Account</span>
+                <span className="text-xs text-muted-foreground truncate">{user?.isDemoAccount ? 'Buyer Demo' : 'Buyer Account'}</span>
               </div>
             )}
           </div>
@@ -155,14 +189,17 @@ export default function BuyerLayout({
           </div>
           
           <div className="flex items-center gap-3">
+            {user?.isDemoAccount && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-sm">
+                Demo Account
+              </span>
+            )}
             {/* Real Notification Bell with mock user ID */}
             <NotificationBell userId="mock-buyer-id" />
-            
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Settings className="w-5 h-5 text-muted-foreground" />
-            </Button>
           </div>
         </header>
+
+        <DemoBanner />
 
         {/* Scrollable Main View */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative z-0">

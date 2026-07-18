@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
+import dns from 'dns';
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 import { User } from '../src/models/User';
 import { Crop } from '../src/models/Crop';
 import { Auction } from '../src/models/Auction';
@@ -24,9 +26,21 @@ const seedDashboard = async () => {
     await mongoose.connect(MONGO_URI);
     console.log('Connected to MongoDB');
 
+    // Read demo credentials from env or use fallback defaults
+    const farmerEmail = process.env.DEMO_FARMER_EMAIL || 'demo.farmer@agribridge.com';
+    const farmerPassword = process.env.DEMO_FARMER_PASSWORD || 'Demo@123';
+    const buyerEmail = process.env.DEMO_BUYER_EMAIL || 'demo.buyer@agribridge.com';
+    const buyerPassword = process.env.DEMO_BUYER_PASSWORD || 'Demo@123';
+
     // Clean up specific seed users based on email
     console.log('Cleaning up existing seed data...');
-    const seedEmails = ['farmer_seed@example.com', 'buyer_seed@example.com', 'logistics_seed@example.com'];
+    const seedEmails = [
+      farmerEmail, 
+      buyerEmail, 
+      'logistics_seed@example.com',
+      'farmer_seed@example.com',
+      'buyer_seed@example.com'
+    ];
     const existingUsers = await User.find({ email: { $in: seedEmails } });
     const userIds = existingUsers.map(u => u._id);
 
@@ -42,12 +56,15 @@ const seedDashboard = async () => {
     console.log('Inserting fresh seed data...');
 
     // 1. Create Users
-    const passwordHash = await bcrypt.hash('password123', 10);
+    const farmerPasswordHash = await bcrypt.hash(farmerPassword, 10);
+    const buyerPasswordHash = await bcrypt.hash(buyerPassword, 10);
+    const logisticsPasswordHash = await bcrypt.hash('password123', 10);
+
     const farmer = await User.create({
       name: 'Ramesh Kumar',
-      email: 'farmer_seed@example.com',
+      email: farmerEmail,
       phone: '1234500001',
-      passwordHash,
+      passwordHash: farmerPasswordHash,
       role: 'farmer',
       location: {
         type: 'Point',
@@ -59,39 +76,55 @@ const seedDashboard = async () => {
       },
       trustScore: 850,
       creditScore: 780,
-      walletBalance: 125000
+      walletBalance: 125000,
+      isDemoAccount: true
     });
 
     const buyer = await User.create({
       name: 'FreshMart Ltd',
-      email: 'buyer_seed@example.com',
+      email: buyerEmail,
       phone: '1234500002',
-      passwordHash,
-      role: 'buyer'
+      passwordHash: buyerPasswordHash,
+      role: 'buyer',
+      isDemoAccount: true
     });
 
     const logistics = await User.create({
       name: 'AgriTrans',
       email: 'logistics_seed@example.com',
       phone: '1234500003',
-      passwordHash,
-      role: 'logistics'
+      passwordHash: logisticsPasswordHash,
+      role: 'logistics',
+      isDemoAccount: true
     });
 
     // 2. Create Crops (20 crops: 15 available, 5 low stock)
     const crops = [];
     const cropNames = ['Tomato', 'Onion', 'Potato', 'Wheat', 'Rice', 'Soybean', 'Cotton', 'Sugarcane', 'Maize', 'Bajra'];
+    const cropImages: { [key: string]: string } = {
+      'Tomato': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=800&q=80',
+      'Onion': 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?auto=format&fit=crop&w=800&q=80',
+      'Potato': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=800&q=80',
+      'Wheat': 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=800&q=80',
+      'Rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=800&q=80',
+      'Soybean': 'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=800&q=80',
+      'Cotton': 'https://images.unsplash.com/photo-1598514982205-f36b96d1e8d4?auto=format&fit=crop&w=800&q=80',
+      'Sugarcane': 'https://images.unsplash.com/photo-1593113630400-ea4288922497?auto=format&fit=crop&w=800&q=80',
+      'Maize': 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=800&q=80',
+      'Bajra': 'https://images.unsplash.com/photo-1606757389105-64e8e4f1a16b?auto=format&fit=crop&w=800&q=80',
+    };
     for (let i = 0; i < 20; i++) {
+      const currentName = cropNames[i % cropNames.length];
       crops.push({
         farmerId: farmer._id,
-        name: cropNames[i % cropNames.length] + (i > 9 ? ' (Premium)' : ''),
+        name: currentName + (i > 9 ? ' (Premium)' : ''),
         description: 'Freshly harvested organic produce.',
         category: i % 2 === 0 ? 'Vegetables' : 'Grains',
         pricePerUnit: 1500 + Math.floor(Math.random() * 5000), // per unit
         quantity: i < 5 ? (10 + Math.floor(Math.random() * 40)) : (200 + Math.floor(Math.random() * 800)), // First 5 are low stock (< 50)
         unit: 'quintal',
         isOrganic: i % 3 === 0,
-        images: ['https://placehold.co/600x400/2ecc71/ffffff?text=Crop+Image'],
+        images: [cropImages[currentName]],
         status: 'listed',
         location: farmer.location
       });
@@ -109,6 +142,8 @@ const seedDashboard = async () => {
         startTime: new Date(Date.now() - 3600000), // 1 hour ago
         endTime: new Date(Date.now() + 86400000), // 24 hours from now
         status: 'live',
+        quantity: Math.floor(insertedCrops[i].quantity / 2) || 10,
+        minIncrement: 100,
         bids: [{ bidderId: buyer._id, amount: insertedCrops[i].pricePerUnit + 500, timestamp: new Date() }]
       });
     }
@@ -179,7 +214,8 @@ const seedDashboard = async () => {
     await Transaction.insertMany(transactions);
 
     console.log('Seed completed successfully!');
-    console.log(`Test Farmer Email: ${farmer.email} | Password: password123`);
+    console.log(`Test Farmer Email: ${farmer.email} | Password: ${farmerPassword}`);
+    console.log(`Test Buyer Email: ${buyer.email} | Password: ${buyerPassword}`);
 
     mongoose.disconnect();
   } catch (error) {

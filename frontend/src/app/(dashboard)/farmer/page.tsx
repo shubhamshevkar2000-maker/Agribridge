@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Link from 'next/link';
+import { getCropImageUrl } from '@/utils/cropImages';
 
 const fetcher = (url: string) => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
@@ -84,7 +86,7 @@ export default function FarmerDashboard() {
 
   const {
     farmer, walletBalance, trustScore, creditScore, revenue, inventory,
-    marketplace, auctions, deliveries, notifications, recentActivity
+    myListings, auctions, deliveries, notifications, recentActivity
   } = dashboard.data;
 
   return (
@@ -106,7 +108,7 @@ export default function FarmerDashboard() {
         </div>
         <div className="mt-4 md:mt-0 text-right">
           <p className="text-sm text-muted-foreground">Wallet Balance</p>
-          <p className="text-3xl font-bold text-primary">₹{walletBalance.toLocaleString('en-IN')}</p>
+          <p className="text-3xl font-bold text-primary">₹{(walletBalance || 0).toLocaleString('en-IN')}</p>
         </div>
       </div>
 
@@ -120,9 +122,17 @@ export default function FarmerDashboard() {
             <div className="p-2 bg-green-500/10 rounded-lg text-green-500"><IndianRupee className="w-4 h-4" /></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{revenue.monthly.toLocaleString('en-IN')}</div>
-            <p className="text-xs text-muted-foreground mt-1">Today: ₹{revenue.today.toLocaleString('en-IN')}</p>
-            <p className="text-xs text-green-500 font-medium mt-1">+{revenue.growth}% from last month</p>
+            {revenue.monthly === 0 ? (
+              <>
+                <div className="text-2xl font-bold">₹0</div>
+                <p className="text-xs text-muted-foreground mt-1">No sales yet.</p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">₹{revenue.monthly.toLocaleString('en-IN')}</div>
+                <p className="text-xs text-muted-foreground mt-1">Today: ₹{revenue.today.toLocaleString('en-IN')}</p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -133,22 +143,39 @@ export default function FarmerDashboard() {
             <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500"><Package className="w-4 h-4" /></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{inventory.totalCrops} Crops</div>
-            <p className="text-xs text-muted-foreground mt-1">{inventory.availableStock} qtl total available</p>
-            {inventory.lowStock > 0 && <p className="text-xs text-destructive font-medium mt-1">{inventory.lowStock} items low on stock</p>}
+            {inventory.totalCrops === 0 ? (
+              <>
+                <div className="text-2xl font-bold">0 Crops</div>
+                <p className="text-xs text-muted-foreground mt-1">No crops added.</p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{inventory.totalCrops} Crops</div>
+                <p className="text-xs text-muted-foreground mt-1">{inventory.availableStock} total units</p>
+                {inventory.lowStock > 0 && <p className="text-xs text-destructive font-medium mt-1">{inventory.lowStock} items low on stock</p>}
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* 4. Marketplace Card */}
+        {/* 4. My Listings Card */}
         <Card className="glass-card">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">Marketplace</CardTitle>
+            <CardTitle className="text-sm font-medium">My Listings</CardTitle>
             <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500"><Store className="w-4 h-4" /></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{marketplace.activeListings} Active</div>
-            <p className="text-xs text-muted-foreground mt-1">{marketplace.views} profile views this week</p>
-            <p className="text-xs text-blue-500 font-medium mt-1">Avg Price: ₹{Math.round(marketplace.averagePrice)}/qtl</p>
+            {myListings.activeCount === 0 ? (
+              <>
+                <div className="text-2xl font-bold">0 Active</div>
+                <p className="text-xs text-muted-foreground mt-1">No listings available.</p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{myListings.activeCount} Active</div>
+                <p className="text-xs text-muted-foreground mt-1">{myListings.draftCount} drafts, {myListings.soldCount} sold</p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -159,11 +186,20 @@ export default function FarmerDashboard() {
             <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500"><Truck className="w-4 h-4" /></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{deliveries.inTransit} In Transit</div>
-            <p className="text-xs text-muted-foreground mt-1">{deliveries.pending} pending, {deliveries.pickedUp} picked up</p>
-            <div className="mt-2 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
-              <div className="bg-purple-500 h-full" style={{ width: `${(deliveries.delivered / (deliveries.pending + deliveries.inTransit + deliveries.delivered + 1)) * 100}%` }} />
-            </div>
+            {deliveries.inTransit === 0 && deliveries.pending === 0 && deliveries.delivered === 0 ? (
+              <>
+                <div className="text-2xl font-bold">0 Deliveries</div>
+                <p className="text-xs text-muted-foreground mt-1">No deliveries.</p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{deliveries.inTransit} In Transit</div>
+                <p className="text-xs text-muted-foreground mt-1">{deliveries.pending} pending, {deliveries.pickedUp} picked up</p>
+                <div className="mt-2 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-purple-500 h-full" style={{ width: `${(deliveries.delivered / (deliveries.pending + deliveries.inTransit + deliveries.delivered + 0.01)) * 100}%` }} />
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -175,25 +211,33 @@ export default function FarmerDashboard() {
           
           {/* 12. Quick Actions */}
           <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
-              <Plus className="w-4 h-4 mr-2" /> Add Crop
-            </Button>
-            <Button variant="outline" className="bg-background">
-              <Gavel className="w-4 h-4 mr-2 text-amber-500" /> Start Auction
-            </Button>
-            <Button variant="outline" className="bg-background">
-              <Truck className="w-4 h-4 mr-2 text-purple-500" /> Track Deliveries
-            </Button>
-            <Button variant="outline" className="bg-background">
-              <ShieldCheck className="w-4 h-4 mr-2 text-blue-500" /> Apply Loan
-            </Button>
+            <Link href="/farmer/inventory">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
+                <Plus className="w-4 h-4 mr-2" /> Add Crop
+              </Button>
+            </Link>
+            <Link href="/farmer/auctions">
+              <Button variant="outline" className="bg-background">
+                <Gavel className="w-4 h-4 mr-2 text-amber-500" /> Start Auction
+              </Button>
+            </Link>
+            <Link href="/farmer/deliveries">
+              <Button variant="outline" className="bg-background">
+                <Truck className="w-4 h-4 mr-2 text-purple-500" /> Track Deliveries
+              </Button>
+            </Link>
+            <Link href="/farmer/credit">
+              <Button variant="outline" className="bg-background">
+                <ShieldCheck className="w-4 h-4 mr-2 text-blue-500" /> Apply Loan
+              </Button>
+            </Link>
           </div>
 
           {/* 5. Active Auctions Card */}
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex justify-between items-center text-lg">
-                Live Auctions
+                My Live Auctions
                 <Badge variant={auctions.count > 0 ? "destructive" : "secondary"}>
                   {auctions.count} LIVE
                 </Badge>
@@ -204,23 +248,26 @@ export default function FarmerDashboard() {
                 auctions.live.slice(0, 3).map((auction: any) => (
                   <div key={auction._id} className="flex justify-between items-center p-4 bg-secondary/30 rounded-xl mb-3 border border-border/50">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
-                        <Gavel className="w-6 h-6 text-muted-foreground" />
-                      </div>
+                      <img 
+                        src={auction.cropId?.images?.[0] || getCropImageUrl(auction.cropId?.name)} 
+                        alt={auction.cropId?.name || "Crop"} 
+                        className="w-12 h-12 rounded-lg object-cover"
+                        loading="lazy"
+                      />
                       <div>
                         <h4 className="font-semibold">{auction.cropId?.name || "Crop"}</h4>
-                        <p className="text-sm text-muted-foreground">Ends in: {Math.max(0, Math.floor((new Date(auction.endTime).getTime() - Date.now()) / 3600000))} hrs</p>
+                        <p className="text-sm text-muted-foreground">Ends in: {Math.max(0, Math.round((new Date(auction.endTime).getTime() - Date.now()) / 3600000))} hrs</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-xs text-muted-foreground">Highest Bid</div>
-                      <div className="font-bold text-primary">₹{auction.currentHighestBid}</div>
+                      <div className="font-bold text-primary">₹{auction.currentHighestBid || auction.startingBid}</div>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-8 text-muted-foreground bg-secondary/10 rounded-xl border border-dashed">
-                  No active auctions running right now.
+                  No active auctions.
                 </div>
               )}
             </CardContent>
@@ -259,20 +306,41 @@ export default function FarmerDashboard() {
           {/* 7. AgriCredit Card */}
           <Card className="glass-card bg-gradient-to-br from-indigo-500/10 to-blue-500/10">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-indigo-500" /> Trust & Credit</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-indigo-500" /> Credit & Trust</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-end mb-2">
+              {creditScore === 0 ? (
                 <div>
                   <p className="text-xs text-muted-foreground">Credit Score</p>
-                  <h3 className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{creditScore}</h3>
+                  <h3 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">Not calculated yet</h3>
+                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    Complete your first successful sale to generate your Credit Score.
+                  </p>
                 </div>
-                <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 border-indigo-200">Excellent</Badge>
-              </div>
-              <Progress value={creditScore / 10} className="h-2 mb-4" />
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Trust Score: <strong>{trustScore}</strong></span>
-                <span className="text-green-500 font-medium">+15 pts</span>
+              ) : (
+                <div>
+                  <div className="flex justify-between items-end mb-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Credit Score</p>
+                      <h3 className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{creditScore}</h3>
+                    </div>
+                    <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 border-indigo-200">Calculated</Badge>
+                  </div>
+                  <Progress value={creditScore / 10} className="h-2 mb-4" />
+                </div>
+              )}
+              
+              <div className="flex justify-between text-sm mt-4 pt-4 border-t border-border/50">
+                {trustScore === 0 ? (
+                  <span className="text-muted-foreground text-xs leading-normal">
+                    Trust Score: <strong>No trust history</strong>. Complete deliveries and receive ratings to build your Trust Score.
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-muted-foreground">Trust Score: <strong>{trustScore}</strong></span>
+                    <span className="text-green-500 font-medium">+15 pts</span>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

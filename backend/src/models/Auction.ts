@@ -14,7 +14,11 @@ export interface IAuction extends Document {
   startingBid: number;
   currentHighestBid: number;
   winnerId?: Types.ObjectId;
-  status: 'scheduled' | 'live' | 'closed' | 'cancelled';
+  status: 'scheduled' | 'live' | 'closed' | 'cancelled' | 'ended' | 'sold';
+  minIncrement: number;
+  reservePrice?: number;
+  quantity: number;
+  notes?: string;
   bids: IAuctionBid[];
   createdAt: Date;
   updatedAt: Date;
@@ -31,9 +35,13 @@ const auctionSchema = new Schema<IAuction>(
     winnerId: { type: Schema.Types.ObjectId, ref: 'User' },
     status: {
       type: String,
-      enum: ['scheduled', 'live', 'closed', 'cancelled'],
+      enum: ['scheduled', 'live', 'closed', 'cancelled', 'ended', 'sold'],
       default: 'scheduled',
     },
+    minIncrement: { type: Number, default: 100 },
+    reservePrice: { type: Number },
+    quantity: { type: Number, required: true },
+    notes: { type: String },
     bids: [
       {
         bidderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },

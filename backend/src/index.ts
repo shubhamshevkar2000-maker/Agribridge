@@ -40,19 +40,33 @@ const startServer = async () => {
         console.log('OpenWeather key NOT loaded');
       }
 
-      // Background Worker to close expired auctions
+      // Background Worker to manage auction states
       setInterval(async () => {
         try {
+          const now = new Date();
+
+          // 1. Transition scheduled auctions to live
+          const scheduledAuctions = await Auction.find({
+            status: 'scheduled',
+            startTime: { $lte: now }
+          });
+          for (const auction of scheduledAuctions) {
+            console.log(`Starting scheduled auction ${auction._id}`);
+            auction.status = 'live';
+            await auction.save();
+          }
+
+          // 2. Close expired live auctions
           const expiredAuctions = await Auction.find({ 
             status: 'live', 
-            endTime: { $lte: new Date() } 
+            endTime: { $lte: now } 
           });
           for (const auction of expiredAuctions) {
             console.log(`Closing expired auction ${auction._id}`);
             await completeAuction(auction._id.toString());
           }
         } catch (err) {
-          console.error("Error in auction closing worker:", err);
+          console.error("Error in auction background worker:", err);
         }
       }, 10000); // Check every 10 seconds
 

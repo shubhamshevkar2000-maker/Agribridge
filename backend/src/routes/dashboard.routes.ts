@@ -5,13 +5,13 @@ import { Auction } from '../models/Auction';
 import { User } from '../models/User';
 import { Loan } from '../models/Loan';
 import { Delivery } from '../models/Delivery';
-
-const router = Router();
-
 import { Crop } from '../models/Crop';
 import { Notification } from '../models/Notification';
 import { Transaction } from '../models/Transaction';
 
+const router = Router();
+
+// Farmer Dashboard Endpoint
 router.get('/farmer', protect, async (req: any, res) => {
   try {
     const userId = req.user.id;
@@ -36,15 +36,18 @@ router.get('/farmer', protect, async (req: any, res) => {
       .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
     // 2. Fetch Inventory Stats
-    const crops = await Crop.find({ farmerId: userId, status: 'listed' });
-    const totalCrops = crops.length;
-    const availableStock = crops.reduce((sum, crop) => sum + (crop.quantity || 0), 0);
-    const lowStock = crops.filter(c => c.quantity < 50).length;
+    const allCrops = await Crop.find({ farmerId: userId });
+    const totalCrops = allCrops.length;
+    const availableStock = allCrops
+      .filter(c => ['draft', 'listed'].includes(c.status))
+      .reduce((sum, crop) => sum + (crop.quantity || 0), 0);
+    const lowStock = allCrops.filter(c => ['draft', 'listed'].includes(c.status) && c.quantity < 50).length;
 
-    // 3. Fetch Marketplace Stats
-    // Assuming active listings = crops
-    const activeListings = totalCrops;
-    
+    // 3. Fetch Listings Stats
+    const activeListings = allCrops.filter(c => c.status === 'listed').length;
+    const draftListings = allCrops.filter(c => c.status === 'draft').length;
+    const soldListings = allCrops.filter(c => c.status === 'sold').length;
+
     // 4. Fetch Auction Stats
     const activeAuctions = await Auction.find({ farmerId: userId, status: 'live' }).populate('cropId').sort({ endTime: 1 });
     
@@ -85,13 +88,12 @@ router.get('/farmer', protect, async (req: any, res) => {
           profileImage: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2ecc71&color=fff`
         },
         walletBalance: user.walletBalance || 0,
-        trustScore: user.trustScore || 300,
-        creditScore: user.creditScore || 300,
+        trustScore: user.trustScore || 0,
+        creditScore: user.creditScore || 0,
         revenue: {
           total: totalRevenue,
           monthly: monthlyRevenue,
-          today: todayRevenue,
-          growth: 12 // Mock growth percentage for demo
+          today: todayRevenue
         },
         inventory: {
           totalCrops,
@@ -99,11 +101,11 @@ router.get('/farmer', protect, async (req: any, res) => {
           lowStock,
           soldToday: orders.filter(o => new Date(o.createdAt) >= today).reduce((sum, o) => sum + o.quantity, 0)
         },
-        marketplace: {
-          activeListings,
-          views: activeListings * 142, // Mock views for demo
-          interestedBuyers: activeListings * 12,
-          averagePrice: crops.length > 0 ? crops.reduce((sum, c) => sum + (c.pricePerUnit || 0), 0) / crops.length : 0
+        myListings: {
+          activeCount: activeListings,
+          draftCount: draftListings,
+          soldCount: soldListings,
+          totalCount: totalCrops
         },
         auctions: {
           count: activeAuctions.length,
@@ -124,21 +126,54 @@ router.get('/farmer', protect, async (req: any, res) => {
   }
 });
 
+// Buyer Dashboard Endpoint
 router.get('/buyer', protect, async (req: any, res) => {
   try {
     const userId = req.user.id;
     
-    const orders = await Order.find({ buyerId: userId });
-    const totalSpent = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    // 1. Total spent
+    const completedOrders = await Order.find({ buyerId: userId, paymentStatus: 'completed' });
+    const totalSpent = completedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
     
+    // 2. Active orders count
+    const activeOrdersCount = await Order.countDocuments({ 
+      buyerId: userId, 
+      status: { $in: ['Pending', 'Accepted', 'In Transit', 'Dispatched'] } 
+    });
+
+    // 3. Active bids count
     const activeAuctions = await Auction.find({ 'bids.bidderId': userId, status: 'live' });
-    
+
+    // 4. Recent Purchases
+    const recentPurchases = await Order.find({ buyerId: userId })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('cropId')
+      .populate('farmerId', 'name');
+
+    // 5. Deliveries status
+    const buyerOrders = await Order.find({ buyerId: userId }).select('_id');
+    const orderIds = buyerOrders.map(o => o._id);
+    const deliveries = await Delivery.find({ orderId: { $in: orderIds } })
+      .populate({
+        path: 'orderId',
+        populate: { path: 'cropId' }
+      })
+      .sort({ updatedAt: -1 })
+      .limit(5);
+
+    // 6. Recommended Crops (Return empty array since personalized recommendation logic is not available yet)
+    const recommendedCrops: any[] = [];
+
     res.json({
       success: true,
       data: {
         totalSpent,
+        activeOrdersCount,
         activeBidsCount: activeAuctions.length,
-        recentOrders: orders.slice(0, 5)
+        recentPurchases,
+        deliveries,
+        recommendedCrops
       }
     });
   } catch (error: any) {
@@ -146,9 +181,9 @@ router.get('/buyer', protect, async (req: any, res) => {
   }
 });
 
+// Logistics Dashboard Endpoint
 router.get('/logistics', protect, async (req: any, res) => {
   try {
-    // We would normally filter by logistics provider ID here
     res.json({
       success: true,
       data: {
@@ -163,10 +198,10 @@ router.get('/logistics', protect, async (req: any, res) => {
   }
 });
 
+// Bank Dashboard Endpoint
 router.get('/bank', protect, async (req: any, res) => {
   try {
     const loans = await Loan.find({ bankId: req.user.id });
-    
     res.json({
       success: true,
       data: {
@@ -181,6 +216,7 @@ router.get('/bank', protect, async (req: any, res) => {
   }
 });
 
+// Admin Dashboard Endpoint
 router.get('/admin', protect, async (req: any, res) => {
   try {
     if (req.user.role !== 'admin') {
@@ -203,7 +239,6 @@ router.get('/admin', protect, async (req: any, res) => {
     const totalGmv = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
     const platformRevenue = totalGmv * 0.01;
 
-    // Group monthly GMV and Revenue for the current year
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthlyStatsMap = new Map();
     months.forEach(m => monthlyStatsMap.set(m, { name: m, GMV: 0, Revenue: 0, Users: 0 }));
@@ -220,7 +255,6 @@ router.get('/admin', protect, async (req: any, res) => {
       }
     });
 
-    // Group monthly users
     const allUsers = await User.find();
     allUsers.forEach(u => {
       const date = new Date(u.createdAt || Date.now());

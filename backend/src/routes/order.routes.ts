@@ -4,6 +4,7 @@ import { Order } from '../models/Order';
 import { Crop } from '../models/Crop';
 import { Transaction } from '../models/Transaction';
 import { CreditLedger } from '../models/CreditLedger';
+import { User } from '../models/User';
 import { redisClient } from '../config/redis';
 
 const router = Router();
@@ -20,6 +21,13 @@ router.post('/', protect, async (req: any, res) => {
       return res.status(400).json({ success: false, message: 'Not enough quantity available' });
     }
 
+    // Decrement crop inventory
+    crop.quantity -= quantity;
+    if (crop.quantity <= 0) {
+      crop.status = 'sold';
+    }
+    await crop.save();
+
     const totalAmount = crop.pricePerUnit * quantity;
 
     const order = await Order.create({
@@ -32,8 +40,20 @@ router.post('/', protect, async (req: any, res) => {
       deliveryStatus: 'pending'
     });
 
-    // We do NOT decrement crop quantity here yet, maybe only on payment success. 
-    // For MVP, just return the order.
+    // Retrieve buyer for location
+    const buyer = await User.findById(req.user.id);
+    const dropLocation = buyer?.location || { type: 'Point', coordinates: [0, 0] };
+    const pickupLocation = crop.location || { type: 'Point', coordinates: [0, 0] };
+
+    // Automatically create Delivery record
+    const { Delivery } = require('../models/Delivery');
+    await Delivery.create({
+      orderId: order._id,
+      pickupLocation,
+      dropLocation,
+      status: 'unassigned'
+    });
+
     res.status(201).json({ success: true, data: order });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -45,12 +65,25 @@ router.get('/', protect, async (req: any, res) => {
   try {
     const query = req.user.role === 'farmer' ? { farmerId: req.user.id } : { buyerId: req.user.id };
     const orders = await Order.find(query)
-      .populate('cropId', 'name category')
+      .populate('cropId')
       .populate('buyerId', 'name phone location')
       .populate('farmerId', 'name phone location')
       .sort({ createdAt: -1 });
+
+    const { Delivery } = require('../models/Delivery');
     
-    res.json({ success: true, data: orders });
+    // Find delivery status for each order
+    const ordersWithDelivery = await Promise.all(orders.map(async (order) => {
+      const delivery = await Delivery.findOne({ orderId: order._id })
+        .populate('logisticsPartnerId', 'name phone')
+        .populate('driverId', 'name phone');
+      
+      const orderObj = order.toObject();
+      (orderObj as any).delivery = delivery;
+      return orderObj;
+    }));
+    
+    res.json({ success: true, data: ordersWithDelivery });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -134,9 +167,6 @@ router.post('/:id/verify-cash', protect, async (req: any, res) => {
       ledger = await CreditLedger.create({ farmerId: order.farmerId });
     }
 
-    // [NOTE: MVP PLACEHOLDER]
-    // Incrementing trustScore by 50 here is a simplified placeholder MVP value 
-    // for the hackathon demo, not a finished credit-scoring algorithmic method.
     ledger.trustScore += 50; 
     ledger.factors.transactionConsistency += 10;
     
@@ -144,10 +174,91 @@ router.post('/:id/verify-cash', protect, async (req: any, res) => {
     ledger.history.push({ date: new Date(), score: ledger.trustScore });
     await ledger.save();
 
+    // Synchronize trustScore to User model
+    await User.findByIdAndUpdate(order.farmerId, { trustScore: ledger.trustScore });
+
     // Clear OTP
     await redisClient.del(redisKey);
 
     res.json({ success: true, message: 'Payment verified and transaction recorded', data: transaction });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET /api/orders/:id - Fetch single order details
+router.get('/:id', protect, async (req: any, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('cropId')
+      .populate('buyerId', 'name phone location email')
+      .populate('farmerId', 'name phone location email');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.buyerId._id.toString() !== req.user.id && order.farmerId._id.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const { Delivery } = require('../models/Delivery');
+    const delivery = await Delivery.findOne({ orderId: order._id })
+      .populate('logisticsPartnerId', 'name phone')
+      .populate('driverId', 'name phone');
+
+    const orderObj = order.toObject();
+    (orderObj as any).delivery = delivery;
+
+    res.json({ success: true, data: orderObj });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/orders/:id/cancel - Cancel order
+router.post('/:id/cancel', protect, async (req: any, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.buyerId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const cannotCancel = ['picked_up', 'in_transit', 'delivered', 'cancelled'].includes(order.deliveryStatus);
+    if (cannotCancel) {
+      return res.status(400).json({ success: false, message: 'Order has already shipped or been processed' });
+    }
+
+    const { Delivery } = require('../models/Delivery');
+    const delivery = await Delivery.findOne({ orderId: order._id });
+    if (delivery && ['picked_up', 'in_transit', 'delivered', 'cancelled'].includes(delivery.status)) {
+      return res.status(400).json({ success: false, message: 'Order has already been shipped' });
+    }
+
+    order.deliveryStatus = 'cancelled';
+    order.paymentStatus = 'refunded';
+    await order.save();
+
+    if (delivery) {
+      delivery.status = 'cancelled';
+      await delivery.save();
+    }
+
+    // Release inventory
+    const crop = await Crop.findById(order.cropId);
+    if (crop) {
+      crop.quantity += order.quantity;
+      if (crop.status === 'sold' || crop.status === 'in_auction') {
+        crop.status = 'listed';
+      }
+      await crop.save();
+    }
+
+    res.json({ success: true, message: 'Order cancelled successfully', data: order });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

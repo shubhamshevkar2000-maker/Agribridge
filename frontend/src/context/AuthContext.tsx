@@ -9,6 +9,7 @@ export interface User {
   role: string;
   email?: string;
   phone?: string;
+  isDemoAccount?: boolean;
 }
 
 interface AuthContextType {

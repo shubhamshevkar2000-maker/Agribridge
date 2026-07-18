@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -20,9 +20,31 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState('');
 
-  const { register, handleSubmit, formState: { errors } } = useForm<z.infer<typeof loginSchema>>({
+  const [farmerEmail, setFarmerEmail] = useState(process.env.NEXT_PUBLIC_DEMO_FARMER_EMAIL || 'demo.farmer@agribridge.com');
+  const [buyerEmail, setBuyerEmail] = useState(process.env.NEXT_PUBLIC_DEMO_BUYER_EMAIL || 'demo.buyer@agribridge.com');
+  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD || 'Demo@123';
+
+  useEffect(() => {
+    fetch('/api/auth/demo-config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          if (data.farmerEmail) setFarmerEmail(data.farmerEmail);
+          if (data.buyerEmail) setBuyerEmail(data.buyerEmail);
+        }
+      })
+      .catch(err => console.error('Failed to fetch demo configuration:', err));
+  }, []);
+
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
   });
+
+  const handleDemoLogin = (email: string) => {
+    setValue('emailOrPhone', email);
+    setValue('password', demoPassword);
+    handleSubmit(onSubmit)();
+  };
 
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
@@ -146,6 +168,53 @@ export default function LoginPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Demo Accounts Section */}
+        <div className="mt-6 text-center space-y-4">
+          <div className="flex flex-col items-center gap-1.5">
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Want to explore AgriBridge without creating an account? Use one of our demo accounts.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-left">
+            {/* Farmer Demo Card */}
+            <div className="p-4 rounded-xl border border-border/50 glass-card bg-secondary/10 hover:bg-secondary/20 transition-all flex flex-col justify-between h-40">
+              <div>
+                <div className="text-2xl mb-1">🌾</div>
+                <h4 className="font-semibold text-sm text-foreground">Farmer Demo</h4>
+                <p className="text-xs text-muted-foreground mt-1">Explore the platform as a Farmer.</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDemoLogin(farmerEmail)}
+                className="w-full text-xs font-medium border-primary/20 hover:bg-primary/10 hover:text-primary transition-all"
+                disabled={isLoading}
+              >
+                Login as Demo
+              </Button>
+            </div>
+
+            {/* Buyer Demo Card */}
+            <div className="p-4 rounded-xl border border-border/50 glass-card bg-secondary/10 hover:bg-secondary/20 transition-all flex flex-col justify-between h-40">
+              <div>
+                <div className="text-2xl mb-1">🛒</div>
+                <h4 className="font-semibold text-sm text-foreground">Buyer Demo</h4>
+                <p className="text-xs text-muted-foreground mt-1">Explore the platform as a Buyer.</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDemoLogin(buyerEmail)}
+                className="w-full text-xs font-medium border-primary/20 hover:bg-primary/10 hover:text-primary transition-all"
+                disabled={isLoading}
+              >
+                Login as Demo
+              </Button>
+            </div>
+          </div>
+        </div>
       </motion.div>
     </div>
   );

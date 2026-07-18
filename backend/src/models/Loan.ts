@@ -7,7 +7,7 @@ export interface ILoan extends Document {
   amountApproved?: number;
   tenure: number; // in months
   interestRate?: number;
-  status: 'pending' | 'under_review' | 'approved' | 'disbursed' | 'rejected';
+  status: 'pending' | 'under_review' | 'approved' | 'disbursed' | 'rejected' | 'repaid' | 'defaulted';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,7 +22,7 @@ const loanSchema = new Schema<ILoan>(
     interestRate: { type: Number },
     status: {
       type: String,
-      enum: ['pending', 'under_review', 'approved', 'disbursed', 'rejected'],
+      enum: ['pending', 'under_review', 'approved', 'disbursed', 'rejected', 'repaid', 'defaulted'],
       default: 'pending',
     },
   },

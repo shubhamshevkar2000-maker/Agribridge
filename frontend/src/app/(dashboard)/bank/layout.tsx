@@ -149,9 +149,6 @@ export default function BankLayout({
           
           <div className="flex items-center gap-3">
             <NotificationBell userId="mock-bank-id" />
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Settings className="w-5 h-5 text-muted-foreground" />
-            </Button>
           </div>
         </header>
 

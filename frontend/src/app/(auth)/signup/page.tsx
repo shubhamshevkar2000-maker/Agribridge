@@ -6,97 +6,88 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, User, Tractor, ShoppingCart, Truck, Landmark, CheckCircle2, FileText, X } from 'lucide-react';
-import dynamic from 'next/dynamic';
-
-const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false });
+import { Loader2, Tractor, ShoppingCart, CheckCircle2, ChevronRight, ChevronLeft, MapPin } from 'lucide-react';
 
 const roles = [
   { id: 'farmer', title: 'Farmer', icon: Tractor, desc: 'Sell crops, run auctions, and access loans.' },
   { id: 'buyer', title: 'Buyer', icon: ShoppingCart, desc: 'Bid on live auctions and buy fresh produce.' },
-  { id: 'logistics', title: 'Logistics Partner', icon: Truck, desc: 'Deliver produce and earn by route.' },
-  { id: 'bank', title: 'Bank / NBFC', icon: Landmark, desc: 'Provide credit using AgriCredit scores.' },
 ];
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [pincodeLoading, setPincodeLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
+
+  const [locationForm, setLocationForm] = useState({
+    zipCode: '',
+    address: '',
+    city: '',
+    district: '',
+    state: ''
+  });
+
   const [serverError, setServerError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  // File states
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string>('');
-  const [base64Data, setBase64Data] = useState<string>('');
-  const [fileError, setFileError] = useState<string>('');
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFileError('');
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handlePincodeChange = async (val: string) => {
+    const numericVal = val.replace(/\D/g, '').slice(0, 6);
+    setLocationForm(prev => ({ ...prev, zipCode: numericVal }));
 
-    // Validate type
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (!validTypes.includes(file.type)) {
-      setFileError('Invalid file type. Only PDF, JPG, and PNG are allowed.');
-      setSelectedFile(null);
-      setFilePreview('');
-      setBase64Data('');
-      return;
+    if (numericVal.length === 6) {
+      setPincodeLoading(true);
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${numericVal}`);
+        const json = await res.json();
+        if (json[0]?.Status === 'Success') {
+          const postOffices = json[0].PostOffice;
+          if (postOffices && postOffices.length > 0) {
+            const details = postOffices[0];
+            setLocationForm(prev => ({
+              ...prev,
+              city: details.Division || details.Block || details.Name || '',
+              district: details.District || '',
+              state: details.State || ''
+            }));
+            // Clear location validation errors if resolved
+            setErrors(prev => ({ ...prev, zipCode: '', city: '', district: '', state: '' }));
+          }
+        }
+      } catch (e) {
+        console.error('Pincode lookup failed', e);
+      } finally {
+        setPincodeLoading(false);
+      }
     }
-
-    // Validate size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setFileError('File size exceeds the 5MB limit.');
-      setSelectedFile(null);
-      setFilePreview('');
-      setBase64Data('');
-      return;
-    }
-
-    setSelectedFile(file);
-
-    // Create local preview URL
-    if (file.type.startsWith('image/')) {
-      setFilePreview(URL.createObjectURL(file));
-    } else {
-      setFilePreview('');
-    }
-
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setBase64Data(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
-  const nextStep = () => {
+  const validateStep = () => {
+    const newErrors: Record<string, string> = {};
+
     if (step === 1) {
-      const newErrors: Record<string, string> = {};
-      
-      if (!formData.name || !formData.name.trim()) {
-        newErrors.name = 'Name is required.';
+      if (!formData.name.trim()) {
+        newErrors.name = 'Full Name is required.';
       } else if (formData.name.trim().length < 2) {
         newErrors.name = 'Name must be at least 2 characters.';
       }
 
       if (!formData.email && !formData.phone) {
-        newErrors.email = 'Either email or phone number is required.';
-        newErrors.phone = 'Either email or phone number is required.';
+        newErrors.email = 'Either email or mobile number is required.';
+        newErrors.phone = 'Either email or mobile number is required.';
       } else {
         if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
           newErrors.email = 'Please enter a valid email address.';
         }
         if (formData.phone && !/^\+?[0-9]{10,15}$/.test(formData.phone.replace(/[\s-]/g, ''))) {
-          newErrors.phone = 'Please enter a valid phone number (10-15 digits).';
+          newErrors.phone = 'Please enter a valid mobile number (10-15 digits).';
         }
       }
 
@@ -106,30 +97,69 @@ export default function SignupPage() {
         newErrors.password = 'Password must be at least 6 characters.';
       }
 
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
+      if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match.';
       }
     }
-    setErrors({});
-    setStep(step + 1);
+
+    if (step === 3) {
+      if (!locationForm.zipCode) {
+        newErrors.zipCode = 'Pincode is required.';
+      } else if (locationForm.zipCode.length !== 6) {
+        newErrors.zipCode = 'Pincode must be exactly 6 digits.';
+      }
+
+      if (!locationForm.address.trim()) {
+        newErrors.address = 'Village / Area is required.';
+      }
+      if (!locationForm.city.trim()) {
+        newErrors.city = 'City is required.';
+      }
+      if (!locationForm.district.trim()) {
+        newErrors.district = 'District is required.';
+      }
+      if (!locationForm.state.trim()) {
+        newErrors.state = 'State is required.';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
-  const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
+
+  const nextStep = () => {
+    if (validateStep()) {
+      setStep(prev => prev + 1);
+    }
+  };
+
+  const prevStep = () => {
+    setErrors({});
+    setStep(prev => prev - 1);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setServerError('');
+
     try {
       const payload: any = {
         name: formData.name,
         password: formData.password,
-        role: selectedRole
+        role: selectedRole,
+        location: {
+          coordinates: [0, 0],
+          address: locationForm.address,
+          city: locationForm.city,
+          district: locationForm.district,
+          state: locationForm.state,
+          zipCode: locationForm.zipCode
+        }
       };
+
       if (formData.email) payload.email = formData.email;
       if (formData.phone) payload.phone = formData.phone;
-      if (base64Data) payload.kycDocument = base64Data;
-      if (coordinates) payload.location = { coordinates: [coordinates[1], coordinates[0]] }; // Longitude, Latitude for GeoJSON
 
       const response = await fetch(`/api/auth/signup`, {
         method: 'POST',
@@ -147,8 +177,7 @@ export default function SignupPage() {
             const pathName = err.path && err.path.length > 0 
               ? err.path[0].charAt(0).toUpperCase() + err.path[0].slice(1) 
               : '';
-            const prefix = pathName ? `${pathName}: ` : '';
-            return `${prefix}${err.message || 'Validation failed'}`;
+            return `${pathName ? pathName + ': ' : ''}${err.message || 'Validation failed'}`;
           });
           throw new Error(msgs.join('\n'));
         }
@@ -162,9 +191,6 @@ export default function SignupPage() {
       const roleRedirects: Record<string, string> = {
         farmer: '/farmer',
         buyer: '/buyer',
-        logistics: '/logistics',
-        bank: '/bank',
-        admin: '/admin',
       };
 
       window.location.href = roleRedirects[resData.data.role] || '/farmer';
@@ -183,7 +209,7 @@ export default function SignupPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl"
+        className="w-full max-w-lg"
       >
         <Link href="/" className="flex items-center justify-center gap-2 mb-8">
           <div className="w-8 h-8 rounded-lg bg-primary-gradient flex items-center justify-center text-white font-heading font-bold text-xl">A</div>
@@ -201,10 +227,10 @@ export default function SignupPage() {
           </div>
           
           <CardHeader className="text-center pb-2 pt-8">
-            <CardTitle className="text-3xl font-heading">
-              {step === 1 ? 'Create an account' : step === 2 ? 'Choose your role' : step === 3 ? 'Complete your profile' : 'Set your location'}
+            <CardTitle className="text-2xl font-heading font-bold">
+              {step === 1 ? 'Personal Details' : step === 2 ? 'Choose your role' : step === 3 ? 'Add Location' : 'Review & Create Account'}
             </CardTitle>
-            <CardDescription className="text-base text-muted-foreground mt-2">
+            <CardDescription className="text-sm text-muted-foreground mt-1">
               Step {step} of 4
             </CardDescription>
           </CardHeader>
@@ -217,12 +243,12 @@ export default function SignupPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className="space-y-4 max-w-md mx-auto"
+                  className="space-y-4"
                 >
                   <div className="space-y-1">
                     <Input 
                       placeholder="Full Name" 
-                      className={`h-12 bg-input/30 ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                      className={`h-11 bg-input/30 ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
                       value={formData.name} 
                       onChange={e => {
                         setFormData({ ...formData, name: e.target.value });
@@ -236,9 +262,9 @@ export default function SignupPage() {
 
                   <div className="space-y-1">
                     <Input 
-                      placeholder="Email Address" 
+                      placeholder="Email Address (Optional)" 
                       type="email" 
-                      className={`h-12 bg-input/30 ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                      className={`h-11 bg-input/30 ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
                       value={formData.email} 
                       onChange={e => {
                         setFormData({ ...formData, email: e.target.value });
@@ -252,9 +278,9 @@ export default function SignupPage() {
 
                   <div className="space-y-1">
                     <Input 
-                      placeholder="Phone Number" 
+                      placeholder="Mobile Number" 
                       type="tel" 
-                      className={`h-12 bg-input/30 ${errors.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                      className={`h-11 bg-input/30 ${errors.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
                       value={formData.phone} 
                       onChange={e => {
                         setFormData({ ...formData, phone: e.target.value });
@@ -270,7 +296,7 @@ export default function SignupPage() {
                     <Input 
                       placeholder="Password" 
                       type="password" 
-                      className={`h-12 bg-input/30 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                      className={`h-11 bg-input/30 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
                       value={formData.password} 
                       onChange={e => {
                         setFormData({ ...formData, password: e.target.value });
@@ -282,15 +308,24 @@ export default function SignupPage() {
                     )}
                   </div>
 
-                  {serverError && (
-                    <div className="text-sm text-destructive font-medium text-center space-y-1">
-                      {serverError.split('\n').map((err, i) => (
-                        <p key={i}>{err}</p>
-                      ))}
-                    </div>
-                  )}
-                  <Button onClick={nextStep} className="w-full h-12 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.02] transition-transform">
-                    Continue
+                  <div className="space-y-1">
+                    <Input 
+                      placeholder="Confirm Password" 
+                      type="password" 
+                      className={`h-11 bg-input/30 ${errors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                      value={formData.confirmPassword} 
+                      onChange={e => {
+                        setFormData({ ...formData, confirmPassword: e.target.value });
+                        if (errors.confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: '' }));
+                      }}
+                    />
+                    {errors.confirmPassword && (
+                      <p className="text-xs text-destructive font-medium pl-1">{errors.confirmPassword}</p>
+                    )}
+                  </div>
+
+                  <Button onClick={nextStep} className="w-full h-11 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.01] transition-transform mt-2">
+                    Continue <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
                 </motion.div>
               )}
@@ -301,31 +336,37 @@ export default function SignupPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className="grid sm:grid-cols-2 gap-4"
+                  className="space-y-4"
                 >
-                  {roles.map(role => (
-                    <button
-                      key={role.id}
-                      onClick={() => setSelectedRole(role.id)}
-                      className={`text-left p-4 rounded-xl border-2 transition-all ${
-                        selectedRole === role.id 
-                          ? 'border-primary bg-primary/5 shadow-md scale-[1.02]' 
-                          : 'border-border/50 hover:border-primary/50 glass hover:bg-primary/5'
-                      }`}
-                    >
-                      <role.icon className={`w-8 h-8 mb-3 ${selectedRole === role.id ? 'text-primary' : 'text-muted-foreground'}`} />
-                      <div className="font-heading font-bold text-lg mb-1 text-foreground">{role.title}</div>
-                      <div className="text-sm text-muted-foreground">{role.desc}</div>
-                    </button>
-                  ))}
-                  
-                  <div className="col-span-full mt-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    {roles.map(role => (
+                      <button
+                        key={role.id}
+                        type="button"
+                        onClick={() => setSelectedRole(role.id)}
+                        className={`text-left p-5 rounded-xl border-2 transition-all ${
+                          selectedRole === role.id 
+                            ? 'border-primary bg-primary/5 shadow-md scale-[1.01]' 
+                            : 'border-border/50 hover:border-primary/50 glass hover:bg-primary/5'
+                        }`}
+                      >
+                        <role.icon className={`w-8 h-8 mb-3 ${selectedRole === role.id ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <div className="font-heading font-bold text-lg mb-1 text-foreground">{role.title}</div>
+                        <div className="text-xs text-muted-foreground leading-relaxed">{role.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <Button variant="outline" onClick={prevStep} className="flex-1 h-11 rounded-xl">
+                      <ChevronLeft className="w-4 h-4 mr-1" /> Back
+                    </Button>
                     <Button 
                       onClick={nextStep} 
                       disabled={!selectedRole}
-                      className="w-full h-12 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.02] transition-transform disabled:opacity-50"
+                      className="flex-1 h-11 bg-primary-gradient text-base font-medium rounded-xl disabled:opacity-50"
                     >
-                      Continue
+                      Continue <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </div>
                 </motion.div>
@@ -337,76 +378,94 @@ export default function SignupPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className="space-y-4 max-w-md mx-auto"
+                  className="space-y-4"
                 >
-                  <div className="p-4 bg-secondary/50 rounded-xl border border-border/50 text-center mb-6 text-sm text-muted-foreground">
-                    Upload your KYC documents to verify your identity. You can also skip this and do it later from your dashboard.
-                  </div>
-                  
-                  <div className="relative">
-                    {selectedFile ? (
-                      <div className="border-2 border-dashed border-primary bg-primary/5 rounded-xl p-6 text-center relative">
-                        <button 
-                          type="button" 
-                          onClick={() => {
-                            setSelectedFile(null);
-                            setFilePreview('');
-                            setBase64Data('');
-                            setFileError('');
-                          }} 
-                          className="absolute top-3 right-3 p-1 rounded-full hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                        
-                        <div className="flex flex-col items-center gap-3">
-                          {filePreview ? (
-                            <img src={filePreview} alt="KYC Preview" className="w-24 h-24 object-cover rounded-lg border border-border" />
-                          ) : (
-                            <div className="w-20 h-20 rounded-lg bg-secondary/80 flex items-center justify-center border border-border">
-                              <FileText className="w-10 h-10 text-primary" />
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center gap-1.5 text-primary text-sm font-semibold mt-1">
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>Document Captured</span>
-                          </div>
-                          
-                          <div className="text-sm font-medium text-foreground truncate max-w-[250px]">
-                            {selectedFile.name}
-                          </div>
-                          
-                          <div className="text-xs text-muted-foreground">
-                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <label className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:bg-secondary/20 transition-colors cursor-pointer block">
-                        <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} />
-                        <User className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
-                        <div className="font-semibold text-foreground mb-1">Click to upload Aadhaar / PAN</div>
-                        <div className="text-xs text-muted-foreground">PDF, JPG or PNG (Max 5MB)</div>
-                      </label>
-                    )}
-                  </div>
-
-                  {fileError && (
-                    <p className="text-sm text-destructive font-medium text-center">{fileError}</p>
-                  )}
-
-                  {serverError && (
-                    <div className="text-sm text-destructive font-medium text-center mt-2 p-2 bg-destructive/10 rounded-lg border border-destructive/20 space-y-1">
-                      {serverError.split('\n').map((err, i) => (
-                        <p key={i}>{err}</p>
-                      ))}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2 space-y-1 relative">
+                      <Input 
+                        placeholder="Pincode" 
+                        maxLength={6}
+                        className={`h-11 bg-input/30 ${errors.zipCode ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                        value={locationForm.zipCode}
+                        onChange={e => handlePincodeChange(e.target.value)}
+                      />
+                      {pincodeLoading && (
+                        <Loader2 className="w-4 h-4 animate-spin absolute right-3 top-3.5 text-muted-foreground" />
+                      )}
+                      {errors.zipCode && (
+                        <p className="text-xs text-destructive font-medium pl-1">{errors.zipCode}</p>
+                      )}
                     </div>
-                  )}
 
-                  <Button type="button" onClick={nextStep} className="w-full h-12 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.02] transition-transform mt-4">
-                    Continue
-                  </Button>
+                    <div className="col-span-2 space-y-1">
+                      <Input 
+                        placeholder="Village / Area Name" 
+                        className={`h-11 bg-input/30 ${errors.address ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                        value={locationForm.address}
+                        onChange={e => {
+                          setLocationForm({ ...locationForm, address: e.target.value });
+                          if (errors.address) setErrors(prev => ({ ...prev, address: '' }));
+                        }}
+                      />
+                      {errors.address && (
+                        <p className="text-xs text-destructive font-medium pl-1">{errors.address}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <Input 
+                        placeholder="City" 
+                        className={`h-11 bg-input/30 ${errors.city ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                        value={locationForm.city}
+                        onChange={e => {
+                          setLocationForm({ ...locationForm, city: e.target.value });
+                          if (errors.city) setErrors(prev => ({ ...prev, city: '' }));
+                        }}
+                      />
+                      {errors.city && (
+                        <p className="text-xs text-destructive font-medium pl-1">{errors.city}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <Input 
+                        placeholder="District" 
+                        className={`h-11 bg-input/30 ${errors.district ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                        value={locationForm.district}
+                        onChange={e => {
+                          setLocationForm({ ...locationForm, district: e.target.value });
+                          if (errors.district) setErrors(prev => ({ ...prev, district: '' }));
+                        }}
+                      />
+                      {errors.district && (
+                        <p className="text-xs text-destructive font-medium pl-1">{errors.district}</p>
+                      )}
+                    </div>
+
+                    <div className="col-span-2 space-y-1">
+                      <Input 
+                        placeholder="State" 
+                        className={`h-11 bg-input/30 ${errors.state ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                        value={locationForm.state}
+                        onChange={e => {
+                          setLocationForm({ ...locationForm, state: e.target.value });
+                          if (errors.state) setErrors(prev => ({ ...prev, state: '' }));
+                        }}
+                      />
+                      {errors.state && (
+                        <p className="text-xs text-destructive font-medium pl-1">{errors.state}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <Button variant="outline" onClick={prevStep} className="flex-1 h-11 rounded-xl">
+                      <ChevronLeft className="w-4 h-4 mr-1" /> Back
+                    </Button>
+                    <Button onClick={nextStep} className="flex-1 h-11 bg-primary-gradient text-base font-medium rounded-xl">
+                      Continue <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
                 </motion.div>
               )}
 
@@ -417,38 +476,48 @@ export default function SignupPage() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   onSubmit={handleSubmit}
-                  className="space-y-4 max-w-md mx-auto"
+                  className="space-y-4"
                 >
-                  <div className="p-4 bg-secondary/50 rounded-xl border border-border/50 text-center mb-6 text-sm text-muted-foreground">
-                    Pin your location on the map. This helps us connect you with nearby logistics partners and farmers.
-                  </div>
-                  
-                  <div className="relative">
-                    <LocationPicker onLocationSelect={(loc) => setCoordinates(loc)} />
-                  </div>
-                  {coordinates && (
-                    <div className="text-center text-sm text-muted-foreground mt-2">
-                      Location selected: {coordinates[0].toFixed(4)}, {coordinates[1].toFixed(4)}
+                  <div className="p-4 bg-secondary/30 rounded-xl border border-border/50 space-y-3">
+                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Account Summary</h3>
+                    
+                    <div className="grid grid-cols-2 gap-y-2 text-sm">
+                      <span className="text-muted-foreground">Name:</span>
+                      <span className="font-medium text-foreground">{formData.name}</span>
+
+                      <span className="text-muted-foreground">Contact:</span>
+                      <span className="font-medium text-foreground">{formData.phone || formData.email}</span>
+
+                      <span className="text-muted-foreground">Selected Role:</span>
+                      <span className="font-semibold text-primary capitalize">{selectedRole}</span>
+
+                      <span className="text-muted-foreground flex items-start gap-1"><MapPin className="w-3.5 h-3.5 text-muted-foreground mt-0.5" /> Location:</span>
+                      <span className="font-medium text-foreground leading-snug">
+                        {locationForm.address}, {locationForm.city}, {locationForm.state} - {locationForm.zipCode}
+                      </span>
                     </div>
-                  )}
+                  </div>
 
                   {serverError && (
-                    <div className="text-sm text-destructive font-medium text-center mt-2 p-2 bg-destructive/10 rounded-lg border border-destructive/20 space-y-1">
-                      {serverError.split('\n').map((err, i) => (
-                        <p key={i}>{err}</p>
-                      ))}
+                    <div className="text-xs text-destructive font-medium p-2.5 bg-destructive/10 rounded-lg border border-destructive/20 text-center">
+                      {serverError}
                     </div>
                   )}
 
-                  <Button type="submit" disabled={isLoading} className="w-full h-12 bg-primary-gradient text-base font-medium rounded-xl hover:scale-[1.02] transition-transform mt-4">
-                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Complete Sign Up'}
-                  </Button>
+                  <div className="flex gap-3 mt-6">
+                    <Button type="button" variant="outline" onClick={prevStep} className="flex-1 h-11 rounded-xl" disabled={isLoading}>
+                      <ChevronLeft className="w-4 h-4 mr-1" /> Back
+                    </Button>
+                    <Button type="submit" disabled={isLoading} className="flex-1 h-11 bg-primary-gradient text-base font-medium rounded-xl">
+                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Account'}
+                    </Button>
+                  </div>
                 </motion.form>
               )}
             </AnimatePresence>
 
             {step === 1 && (
-              <div className="mt-8 text-center text-sm text-muted-foreground">
+              <div className="mt-6 text-center text-sm text-muted-foreground">
                 Already have an account?{' '}
                 <Link href="/login" className="text-primary font-semibold hover:underline">
                   Log in

@@ -4,27 +4,49 @@ import { CreditLedger } from '../models/CreditLedger';
 
 const router = Router();
 
+// GET /api/credit
+router.get('/', protect, async (req: any, res) => {
+  try {
+    let ledger = await CreditLedger.findOne({ farmerId: req.user.id });
+    
+    if (!ledger) {
+      ledger = await CreditLedger.create({
+        farmerId: req.user.id,
+        trustScore: 0,
+        creditScore: 0,
+        factors: {
+          repaymentHistory: 0,
+          transactionConsistency: 0,
+          disputeRate: 0,
+          incomeStability: 0,
+        },
+        history: []
+      });
+    }
+
+    res.json({ success: true, data: ledger });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // GET /api/credit/score
 router.get('/score', protect, async (req: any, res) => {
   try {
     let ledger = await CreditLedger.findOne({ farmerId: req.user.id });
     
-    // Auto-generate if doesn't exist for demo purposes
     if (!ledger) {
       ledger = await CreditLedger.create({
         farmerId: req.user.id,
-        trustScore: 750,
-        creditScore: 700,
+        trustScore: 0,
+        creditScore: 0,
         factors: {
-          repaymentHistory: 85,
-          transactionConsistency: 70,
-          disputeRate: 5,
-          incomeStability: 60,
+          repaymentHistory: 0,
+          transactionConsistency: 0,
+          disputeRate: 0,
+          incomeStability: 0,
         },
-        history: [
-          { date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), score: 680 },
-          { date: new Date(), score: 700 }
-        ]
+        history: []
       });
     }
 

@@ -19,23 +19,28 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Menu
+  Menu,
+  ShoppingBag,
+  BarChart3
 } from 'lucide-react';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
+import { DemoBanner } from '@/components/DemoBanner';
 
 const navItems = [
   { name: 'Dashboard', href: '/farmer', icon: LayoutDashboard },
-  { name: 'Marketplace', href: '/farmer/marketplace', icon: Store },
-  { name: 'Auctions', href: '/farmer/auctions', icon: Gavel },
+  { name: 'My Crops', href: '/farmer/crops', icon: Store },
+  { name: 'My Auctions', href: '/farmer/auctions', icon: Gavel },
   { name: 'Inventory', href: '/farmer/inventory', icon: Package },
-  { name: 'AgriCredit', href: '/farmer/credit', icon: ShieldCheck },
+  { name: 'Orders', href: '/farmer/orders', icon: ShoppingBag },
+  { name: 'Deliveries', href: '/farmer/deliveries', icon: Truck },
+  { name: 'Credit & Loans', href: '/farmer/credit', icon: ShieldCheck },
   { name: 'Loans', href: '/farmer/loans', icon: Landmark },
   { name: 'AI Assistant', href: '/farmer/ai', icon: MessageSquare },
-  { name: 'Deliveries', href: '/farmer/deliveries', icon: Truck },
+  { name: 'Analytics', href: '/farmer/analytics', icon: BarChart3 },
 ];
 
 export default function FarmerLayout({
@@ -97,7 +102,7 @@ export default function FarmerLayout({
       <div className="p-4 border-t border-border/50 space-y-2">
         <Link href="/farmer/profile" onClick={() => setMobileOpen(false)}>
           <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer">
-            <Avatar className="w-9 h-9 border border-border">
+            <Avatar className={`w-9 h-9 border ${user?.isDemoAccount ? 'border-amber-500' : 'border-border'}`}>
               <AvatarFallback className="bg-primary/20 text-primary font-semibold">
                 {user?.name?.substring(0, 2).toUpperCase() || 'FM'}
               </AvatarFallback>
@@ -105,7 +110,7 @@ export default function FarmerLayout({
             {!collapsed && (
               <div className="flex flex-col truncate">
                 <span className="text-sm font-semibold truncate text-foreground">{user?.name || 'Loading...'}</span>
-                <span className="text-xs text-muted-foreground truncate">Farmer Account</span>
+                <span className="text-xs text-muted-foreground truncate">{user?.isDemoAccount ? 'Farmer Demo' : 'Farmer Account'}</span>
               </div>
             )}
           </div>
@@ -157,14 +162,17 @@ export default function FarmerLayout({
             </div>
             
             <div className="flex items-center gap-3">
+              {user?.isDemoAccount && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-sm">
+                  Demo Account
+                </span>
+              )}
               {/* Real Notification Bell with real user ID */}
               <NotificationBell userId={user?._id || 'mock-farmer-id'} />
-              
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Settings className="w-5 h-5 text-muted-foreground" />
-              </Button>
             </div>
           </header>
+
+          <DemoBanner />
 
           {/* Scrollable Main View */}
           <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative z-0">

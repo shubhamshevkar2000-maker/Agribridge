@@ -15,12 +15,24 @@ export interface IUser extends Document {
     coordinates: number[];
     address?: string;
     city?: string;
+    district?: string;
     state?: string;
     zipCode?: string;
   };
   trustScore?: number;
   creditScore?: number;
   walletBalance?: number;
+  profilePhoto?: string;
+  farmSize?: number;
+  crops?: string[];
+  experience?: number;
+  buyerPreferences?: string;
+  notificationSettings?: {
+    email: boolean;
+    sms: boolean;
+    whatsapp: boolean;
+  };
+  isDemoAccount?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,12 +61,24 @@ const userSchema = new Schema<IUser>(
       coordinates: { type: [Number] },
       address: { type: String },
       city: { type: String },
+      district: { type: String },
       state: { type: String },
       zipCode: { type: String },
     },
-    trustScore: { type: Number, default: 300 },
-    creditScore: { type: Number, default: 300 },
+    trustScore: { type: Number, default: 0 },
+    creditScore: { type: Number, default: 0 },
     walletBalance: { type: Number, default: 0 },
+    profilePhoto: { type: String },
+    farmSize: { type: Number },
+    crops: [{ type: String }],
+    experience: { type: Number },
+    buyerPreferences: { type: String },
+    notificationSettings: {
+      email: { type: Boolean, default: true },
+      sms: { type: Boolean, default: true },
+      whatsapp: { type: Boolean, default: true },
+    },
+    isDemoAccount: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

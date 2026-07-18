@@ -154,9 +154,6 @@ export default function LogisticsLayout({
               <Navigation className="w-3.5 h-3.5" /> 2 Trucks Active
             </Badge>
             <NotificationBell userId="mock-logistics-id" />
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Settings className="w-5 h-5 text-muted-foreground" />
-            </Button>
           </div>
         </header>
 

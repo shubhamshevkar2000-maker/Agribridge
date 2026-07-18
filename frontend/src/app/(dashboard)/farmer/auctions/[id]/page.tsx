@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, use } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, TrendingUp, CheckCircle, Gavel, ArrowLeft } from 'lucide-react';
+import { getCropImageUrl } from '@/utils/cropImages';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -176,9 +177,12 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
           <Card className="glass-card border-border/50">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-6">
-                <div className="w-full sm:w-48 h-48 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                  <span className="text-4xl text-muted-foreground/30 font-bold uppercase">{auction.cropId?.category}</span>
-                </div>
+                <img 
+                  src={auction.cropId?.images?.[0] || getCropImageUrl(auction.cropId?.name)} 
+                  alt={auction.cropId?.name || "Crop"} 
+                  className="w-full sm:w-48 h-48 rounded-xl object-cover shrink-0"
+                  loading="lazy"
+                />
                 <div className="flex flex-col flex-1">
                   <h1 className="text-2xl font-heading font-bold">{auction.cropId?.name}</h1>
                   <p className="text-muted-foreground mb-4">{auction.cropId?.quantity} {auction.cropId?.unit} • Farmer: {auction.farmerId?.name}</p>
