@@ -28,7 +28,7 @@ export default function BankDashboard() {
     const fetchDashboard = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/dashboard/bank`, {
+        const res = await fetch(`/api/dashboard/bank`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -51,7 +51,7 @@ export default function BankDashboard() {
     setIsProcessing(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/loans/${selectedApp._id}`, {
+      const res = await fetch(`/api/loans/${selectedApp._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

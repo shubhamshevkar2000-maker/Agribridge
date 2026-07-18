@@ -57,7 +57,7 @@ export default function MarketplacePage() {
       if (isOrganic) params.append('isOrganic', 'true');
       if (search) params.append('search', search);
 
-      const res = await fetch(`http://localhost:5000/api/crops?${params.toString()}`, {
+      const res = await fetch(`/api/crops?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();

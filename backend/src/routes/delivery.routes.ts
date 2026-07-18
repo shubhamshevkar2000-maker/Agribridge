@@ -101,6 +101,30 @@ router.get('/', protect, async (req: any, res) => {
   }
 });
 
+// POST /api/deliveries
+router.post('/', protect, async (req: any, res) => {
+  try {
+    const { orderId, pickupLocation, dropLocation } = req.body;
+    
+    // Ensure order exists and belongs to farmer
+    const order = await Order.findOne({ _id: orderId, farmerId: req.user.id });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found or not authorized' });
+    }
+
+    const newDelivery = await Delivery.create({
+      orderId,
+      pickupLocation: pickupLocation || { type: 'Point', coordinates: [0,0] },
+      dropLocation: dropLocation || { type: 'Point', coordinates: [0,0] },
+      status: 'unassigned'
+    });
+
+    res.status(201).json({ success: true, data: newDelivery });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Distance calculation using Haversine formula
 function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // Radius of the earth in km
@@ -210,6 +234,60 @@ router.get('/:id', protect, async (req, res) => {
 
     if (!delivery) {
       return res.status(404).json({ success: false, message: 'Delivery not found' });
+    }
+
+    res.json({ success: true, data: delivery });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET /api/deliveries/assigned
+router.get('/assigned', protect, async (req: any, res) => {
+  try {
+    if (req.user.role !== 'logistics') {
+      return res.status(403).json({ success: false, message: 'Only logistics can view assigned deliveries' });
+    }
+    const deliveries = await Delivery.find({ logisticsPartnerId: req.user.id })
+      .populate({
+        path: 'orderId',
+        populate: [
+          { path: 'cropId', select: 'name category quantity unit' },
+          { path: 'farmerId', select: 'name location phone' },
+          { path: 'buyerId', select: 'name location phone' }
+        ]
+      })
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: deliveries });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// PUT /api/deliveries/:id/status
+router.put('/:id/status', protect, async (req: any, res) => {
+  try {
+    if (req.user.role !== 'logistics') {
+      return res.status(403).json({ success: false, message: 'Only logistics can update status' });
+    }
+    const { status } = req.body;
+    const validStatuses = ['pending', 'in_transit', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const delivery = await Delivery.findOneAndUpdate(
+      { _id: req.params.id, logisticsPartnerId: req.user.id },
+      { status },
+      { new: true }
+    );
+    if (!delivery) {
+      return res.status(404).json({ success: false, message: 'Delivery not found or not assigned to you' });
+    }
+
+    // Also update order status if delivered
+    if (status === 'delivered') {
+      await Order.findByIdAndUpdate(delivery.orderId, { deliveryStatus: 'delivered' });
     }
 
     res.json({ success: true, data: delivery });

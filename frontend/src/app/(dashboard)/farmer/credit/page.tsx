@@ -17,7 +17,7 @@ export default function CreditPage() {
     const fetchCredit = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/credit/score', {
+        const res = await fetch(`/api/credit/score`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -41,13 +41,13 @@ export default function CreditPage() {
   }
 
   const radarData = [
-    { subject: 'Repayment', A: ledger.factors.repaymentHistory, fullMark: 100 },
-    { subject: 'Consistency', A: ledger.factors.transactionConsistency, fullMark: 100 },
-    { subject: 'Disputes (Inv)', A: 100 - ledger.factors.disputeRate, fullMark: 100 },
-    { subject: 'Income Stability', A: ledger.factors.incomeStability, fullMark: 100 },
+    { subject: 'Repayment', A: ledger.factors?.repaymentHistory || 0, fullMark: 100 },
+    { subject: 'Consistency', A: ledger.factors?.transactionConsistency || 0, fullMark: 100 },
+    { subject: 'Disputes (Inv)', A: 100 - (ledger.factors?.disputeRate || 0), fullMark: 100 },
+    { subject: 'Income Stability', A: ledger.factors?.incomeStability || 0, fullMark: 100 },
   ];
 
-  const historyData = ledger.history.map((h: any) => ({
+  const historyData = (ledger.history || []).map((h: any) => ({
     date: new Date(h.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
     score: h.score
   }));
@@ -96,15 +96,15 @@ export default function CreditPage() {
                 />
               </svg>
               <div className="absolute flex flex-col items-center justify-center">
-                <span className={`text-5xl font-bold font-mono ${getScoreColor(ledger.trustScore)}`}>{ledger.trustScore}</span>
+                <span className={`text-5xl font-bold font-mono ${getScoreColor(ledger.trustScore || 0)}`}>{ledger.trustScore || 0}</span>
                 <span className="text-sm text-muted-foreground mt-1">/ 1000</span>
               </div>
             </div>
             
             <div className="w-full bg-secondary/50 p-4 rounded-xl border border-border/50 text-center">
               <div className="text-sm text-muted-foreground mb-1">Financial Credit Score</div>
-              <div className={`text-2xl font-bold ${getScoreColor(ledger.creditScore)}`}>{ledger.creditScore}</div>
-              <Progress value={ledger.creditScore / 10} className="h-1.5 mt-2 bg-muted/50" />
+              <div className={`text-2xl font-bold ${getScoreColor(ledger.creditScore || 0)}`}>{ledger.creditScore || 0}</div>
+              <Progress value={(ledger.creditScore || 0) / 10} className="h-1.5 mt-2 bg-muted/50" />
             </div>
           </CardContent>
         </Card>
@@ -148,6 +148,55 @@ export default function CreditPage() {
                 <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Suggested Schemes */}
+        <Card className="glass-card border-border/50 md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-lg">Pre-approved Loan Schemes</CardTitle>
+            <p className="text-sm text-muted-foreground">Based on your AgriCredit Score of {ledger.creditScore}</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(() => {
+                const score = ledger.creditScore;
+                let schemes = [];
+                if (score >= 750) {
+                  schemes = [
+                    { name: "Premium Agri Expansion", amount: "₹5,00,000", interest: "6.5% p.a.", tenure: "24 months", tag: "Best Offer" },
+                    { name: "Green Tech Machinery", amount: "₹2,50,000", interest: "7.0% p.a.", tenure: "18 months", tag: "Flexible" },
+                    { name: "Zero-Processing Micro", amount: "₹1,00,000", interest: "7.5% p.a.", tenure: "12 months", tag: "Instant" }
+                  ];
+                } else if (score >= 600) {
+                  schemes = [
+                    { name: "Standard Crop Loan", amount: "₹1,00,000", interest: "8.5% p.a.", tenure: "12 months", tag: "Popular" },
+                    { name: "Fertilizer Micro-credit", amount: "₹50,000", interest: "9.0% p.a.", tenure: "6 months", tag: "Quick Cash" }
+                  ];
+                } else {
+                  schemes = [
+                    { name: "Seed Starter Pack", amount: "₹20,000", interest: "11.0% p.a.", tenure: "3 months", tag: "Build Credit" }
+                  ];
+                }
+                
+                return schemes.map((s, i) => (
+                  <div key={i} className="p-4 rounded-xl border border-border/50 bg-secondary/30 flex flex-col gap-2 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 bg-primary/20 text-primary text-[10px] font-bold px-2 py-1 rounded-bl-lg">
+                      {s.tag}
+                    </div>
+                    <div className="font-semibold">{s.name}</div>
+                    <div className="text-2xl font-bold text-primary mt-2">{s.amount}</div>
+                    <div className="flex justify-between text-xs text-muted-foreground mt-4 border-t border-border/50 pt-2">
+                      <span>Interest: <span className="font-medium text-foreground">{s.interest}</span></span>
+                      <span>Tenure: <span className="font-medium text-foreground">{s.tenure}</span></span>
+                    </div>
+                    <Link href="/farmer/loans" className="mt-2">
+                      <Button variant="outline" size="sm" className="w-full">Apply Now</Button>
+                    </Link>
+                  </div>
+                ));
+              })()}
+            </div>
           </CardContent>
         </Card>
       </div>

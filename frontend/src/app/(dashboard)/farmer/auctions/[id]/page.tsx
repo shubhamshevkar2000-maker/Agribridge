@@ -40,7 +40,7 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
           setCurrentUserId(payload.id);
         }
 
-        const res = await fetch(`http://localhost:5000/api/auctions/${auctionId}`, {
+        const res = await fetch(`/api/auctions/${auctionId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -76,7 +76,7 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
     fetchAuction();
 
     // Connect to WebSocket
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io("");
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -88,10 +88,10 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
         setHighestBid(data.highestBid);
         if (data.history) {
           const formattedHistory = data.history.map((b: any) => ({
-            id: Math.random().toString(36).substring(7),
+            id: b.id || Math.random().toString(36).substring(7),
             amount: b.amount,
             bidder: b.bidderName || 'Buyer',
-            timestamp: data.timestamp,
+            timestamp: b.timestamp || new Date().toISOString(),
             isCurrentUser: false
           }));
           setBidFeed(formattedHistory);
@@ -137,7 +137,7 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
     
     if (socket && currentUserId) {
       socket.emit('auction:bid', {
-        auctionId: params.id,
+        auctionId: auctionId,
         amount: val,
         userId: currentUserId
       });

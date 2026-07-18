@@ -26,7 +26,7 @@ export default function BuyerDashboard() {
     const fetchDashboard = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/dashboard/buyer`, {
+        const res = await fetch(`/api/dashboard/buyer`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -45,7 +45,7 @@ export default function BuyerDashboard() {
     const fetchDeliveries = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/deliveries`, {
+        const res = await fetch(`/api/deliveries`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

@@ -25,13 +25,11 @@ export function NotificationBell({ userId }: { userId: string }) {
 
   useEffect(() => {
     // Connect to the backend socket server
-    const newSocket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
+    const newSocket = io("");
     setSocket(newSocket);
 
-    // On connect, ideally we join a room based on the user's ID
     newSocket.on('connect', () => {
-      // In a real implementation, we'd emit an authenticate event here
-      // newSocket.emit('join', userId);
+      newSocket.emit('join_user', userId);
     });
 
     // Listen for real-time notifications

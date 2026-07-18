@@ -35,11 +35,24 @@ export default function LoansPage() {
   const [applyAmount, setApplyAmount] = useState('');
   const [applyTenure, setApplyTenure] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [estimatedEmi, setEstimatedEmi] = useState<number>(0);
+
+  useEffect(() => {
+    const p = parseFloat(applyAmount);
+    const n = parseInt(applyTenure);
+    if (!isNaN(p) && !isNaN(n) && p > 0 && n > 0) {
+      const r = 8.5 / 12 / 100; // 8.5% p.a.
+      const emi = (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+      setEstimatedEmi(Math.round(emi));
+    } else {
+      setEstimatedEmi(0);
+    }
+  }, [applyAmount, applyTenure]);
 
   const fetchLoans = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/loans', {
+      const res = await fetch(`/api/loans`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -61,7 +74,7 @@ export default function LoansPage() {
     setIsApplying(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/loans/apply', {
+      const res = await fetch(`/api/loans/apply`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -109,10 +122,8 @@ export default function LoansPage() {
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary-gradient shadow-lg shadow-primary/20">
+          <DialogTrigger render={<Button className="bg-primary-gradient shadow-lg shadow-primary/20" />}>
               <Plus className="w-4 h-4 mr-2" /> Apply for Loan
-            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] glass-card border-border/50">
             <DialogHeader>
@@ -149,6 +160,12 @@ export default function LoansPage() {
                   className="bg-input/50"
                 />
               </div>
+              {estimatedEmi > 0 && (
+                <div className="p-3 bg-primary/10 rounded-lg flex justify-between items-center mt-2 border border-primary/20">
+                  <span className="text-sm font-medium text-primary">Estimated EMI (at 8.5% p.a.)</span>
+                  <span className="text-lg font-bold text-primary">₹{estimatedEmi.toLocaleString()}/mo</span>
+                </div>
+              )}
               <Button type="submit" className="w-full bg-primary-gradient mt-4" disabled={isApplying}>
                 {isApplying ? 'Submitting...' : 'Submit Application'}
               </Button>

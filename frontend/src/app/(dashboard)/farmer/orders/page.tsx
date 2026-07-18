@@ -17,7 +17,7 @@ export default function FarmerOrdersPage() {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/orders', {
+      const res = await fetch(`/api/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -37,7 +37,7 @@ export default function FarmerOrdersPage() {
     }
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/orders/${orderId}/verify-cash`, {
+      const res = await fetch(`/api/orders/${orderId}/verify-cash`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

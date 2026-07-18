@@ -15,7 +15,7 @@ export default function BuyerOrdersPage() {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/orders', {
+      const res = await fetch(`/api/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -31,7 +31,7 @@ export default function BuyerOrdersPage() {
   const handlePayCash = async (orderId: string) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/orders/${orderId}/pay-cash`, {
+      const res = await fetch(`/api/orders/${orderId}/pay-cash`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });

@@ -44,7 +44,7 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
     const fetchCrop = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:5000/api/crops/${params.id}`, {
+        const res = await fetch(`/api/crops/${params.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -62,7 +62,7 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
   const handleBuyNow = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/orders', {
+      const res = await fetch(`/api/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

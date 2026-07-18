@@ -131,7 +131,7 @@ export default function SignupPage() {
       if (base64Data) payload.kycDocument = base64Data;
       if (coordinates) payload.location = { coordinates: [coordinates[1], coordinates[0]] }; // Longitude, Latitude for GeoJSON
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/signup`, {
+      const response = await fetch(`/api/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

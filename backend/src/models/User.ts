@@ -13,9 +13,14 @@ export interface IUser extends Document {
   location?: {
     type: string;
     coordinates: number[];
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
   };
   trustScore?: number;
   creditScore?: number;
+  walletBalance?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,9 +47,14 @@ const userSchema = new Schema<IUser>(
     location: {
       type: { type: String, enum: ['Point'] },
       coordinates: { type: [Number] },
+      address: { type: String },
+      city: { type: String },
+      state: { type: String },
+      zipCode: { type: String },
     },
-    trustScore: { type: Number },
-    creditScore: { type: Number },
+    trustScore: { type: Number, default: 300 },
+    creditScore: { type: Number, default: 300 },
+    walletBalance: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

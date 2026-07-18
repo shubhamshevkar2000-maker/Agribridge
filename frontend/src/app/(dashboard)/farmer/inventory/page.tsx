@@ -25,6 +25,7 @@ export default function InventoryPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [editingCropId, setEditingCropId] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -40,7 +41,7 @@ export default function InventoryPage() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/crops/inventory`, {
+      const res = await fetch(`/api/crops/inventory`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -67,8 +68,13 @@ export default function InventoryPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/crops`, {
-        method: 'POST',
+      const url = editingCropId 
+        ? `/api/crops/${editingCropId}`
+        : `/api/crops`;
+      const method = editingCropId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -86,10 +92,11 @@ export default function InventoryPage() {
       const data = await res.json();
       
       if (!res.ok || !data.success) {
-        throw new Error(data.message || (data.errors ? data.errors[0].message : 'Failed to add crop'));
+        throw new Error(data.message || (data.errors ? data.errors[0].message : 'Failed to save crop'));
       }
       
       setIsFormOpen(false);
+      setEditingCropId(null);
       setFormData({
         name: '',
         category: 'Vegetables',
@@ -111,7 +118,7 @@ export default function InventoryPage() {
     
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/crops/${id}`, {
+      await fetch(`/api/crops/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -123,6 +130,19 @@ export default function InventoryPage() {
     }
   };
 
+  const handleEdit = (crop: Crop) => {
+    setFormData({
+      name: crop.name,
+      category: crop.category,
+      quantity: crop.quantity.toString(),
+      unit: crop.unit,
+      pricePerUnit: crop.pricePerUnit.toString(),
+      isOrganic: crop.isOrganic
+    });
+    setEditingCropId(crop._id);
+    setIsFormOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -130,7 +150,15 @@ export default function InventoryPage() {
           <h1 className="text-3xl font-heading font-bold text-foreground">Inventory Management</h1>
           <p className="text-muted-foreground">Manage your crops, update stock, and list new produce.</p>
         </div>
-        <Button onClick={() => setIsFormOpen(!isFormOpen)} className="bg-primary hover:bg-primary/90 text-white gap-2">
+        <Button onClick={() => {
+          if (isFormOpen) {
+            setIsFormOpen(false);
+            setEditingCropId(null);
+            setFormData({ name: '', category: 'Vegetables', quantity: '', unit: 'kg', pricePerUnit: '', isOrganic: false });
+          } else {
+            setIsFormOpen(true);
+          }
+        }} className="bg-primary hover:bg-primary/90 text-white gap-2">
           {isFormOpen ? 'Cancel' : <><Plus className="w-4 h-4" /> Add New Crop</>}
         </Button>
       </div>
@@ -145,8 +173,8 @@ export default function InventoryPage() {
           >
             <Card className="glass-card border-primary/20 shadow-md">
               <CardHeader>
-                <CardTitle>List New Crop</CardTitle>
-                <CardDescription>Add details about your harvest to list it in the marketplace.</CardDescription>
+                <CardTitle>{editingCropId ? 'Edit Crop' : 'List New Crop'}</CardTitle>
+                <CardDescription>{editingCropId ? 'Update details about your harvest.' : 'Add details about your harvest to list it in the marketplace.'}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -224,7 +252,7 @@ export default function InventoryPage() {
                   
                   <div className="flex justify-end pt-4">
                     <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : 'Save & List Crop'}
+                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : (editingCropId ? 'Save Changes' : 'Save & List Crop')}
                     </Button>
                   </div>
                 </form>
@@ -289,7 +317,12 @@ export default function InventoryPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleEdit(crop)}
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          >
                             <Edit2 className="w-4 h-4" />
                           </Button>
                           <Button 

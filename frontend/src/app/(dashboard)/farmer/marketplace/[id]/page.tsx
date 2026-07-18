@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, ShieldCheck, Leaf, Heart, ShoppingBag, Info, Truck } from 'lucide-react';
@@ -34,7 +34,9 @@ interface Crop {
   createdAt: string;
 }
 
-export default function CropDetailPage({ params }: { params: { id: string } }) {
+export default function CropDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = use(params);
+  const { id } = unwrappedParams;
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [crop, setCrop] = useState<Crop | null>(null);
@@ -44,7 +46,7 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
     const fetchCrop = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:5000/api/crops/${params.id}`, {
+        const res = await fetch(`/api/crops/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -57,11 +59,33 @@ export default function CropDetailPage({ params }: { params: { id: string } }) {
       setLoading(false);
     };
     fetchCrop();
-  }, [params.id]);
+  }, [id]);
 
   const handleBuyNow = async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    setPurchaseSuccess(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          cropId: crop?._id,
+          quantity: crop?.quantity,
+          totalAmount: (crop?.pricePerUnit || 0) * (crop?.quantity || 1)
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPurchaseSuccess(true);
+      } else {
+        alert(data.message || 'Failed to place order');
+      }
+    } catch (error) {
+      console.error('Failed to place order:', error);
+      alert('Failed to place order');
+    }
   };
 
   if (loading) {

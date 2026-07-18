@@ -1,3 +1,9 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Mail, Phone, MapPin, Truck, Building2 } from "lucide-react";
+
 export default function PlaceholderPage() {
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center">

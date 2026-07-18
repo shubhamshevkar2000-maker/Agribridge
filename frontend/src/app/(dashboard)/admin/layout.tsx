@@ -13,10 +13,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu
+,
+  LogOut
 } from 'lucide-react';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/context/AuthContext';
 
 const navItems = [
   { name: 'System Overview', href: '/admin', icon: Activity },
@@ -30,6 +34,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -79,21 +84,28 @@ export default function AdminLayout({
       <div className="p-4 border-t border-border/50">
         <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
           <Avatar className="w-9 h-9 border border-border">
-            <AvatarFallback className="bg-destructive/20 text-destructive font-semibold">SA</AvatarFallback>
+            <AvatarFallback className="bg-primary/20 text-primary font-semibold">
+                {user?.name?.substring(0, 2).toUpperCase() || 'AD'}
+              </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex flex-col truncate">
-              <span className="text-sm font-semibold truncate text-foreground">Super Admin</span>
+              <span className="text-sm font-semibold truncate text-foreground">{user?.name || 'Loading...'}</span>
               <span className="text-xs text-destructive truncate font-medium">Level 5 Access</span>
             </div>
           )}
         </div>
+        <Button variant="ghost" className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-start gap-3 px-2'} hover:bg-destructive/10 hover:text-destructive transition-colors`} onClick={logout}>
+          <LogOut size={20} className="shrink-0" />
+          {!collapsed && <span>Log out</span>}
+        </Button>
       </div>
     </div>
   );
 
   return (
-    <div className="h-screen w-full flex bg-background overflow-hidden selection:bg-primary/20 selection:text-primary">
+    <ProtectedRoute allowedRoles={['admin']}>
+      <div className="h-screen w-full flex bg-background overflow-hidden selection:bg-primary/20 selection:text-primary">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block h-full z-20">
         <Sidebar />
@@ -143,5 +155,6 @@ export default function AdminLayout({
         </main>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

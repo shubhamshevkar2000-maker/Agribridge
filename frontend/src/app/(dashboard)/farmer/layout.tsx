@@ -24,6 +24,8 @@ import {
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/context/AuthContext';
 
 const navItems = [
   { name: 'Dashboard', href: '/farmer', icon: LayoutDashboard },
@@ -44,6 +46,7 @@ export default function FarmerLayout({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   const Sidebar = ({ isMobile = false }) => (
     <div className={`flex flex-col h-full bg-secondary/20 border-r border-border/50 glass-card rounded-none lg:rounded-r-3xl overflow-hidden transition-all duration-300 ${!isMobile && (collapsed ? 'w-20' : 'w-64')}`}>
@@ -91,76 +94,84 @@ export default function FarmerLayout({
         })}
       </nav>
 
-      <div className="p-4 border-t border-border/50">
+      <div className="p-4 border-t border-border/50 space-y-2">
         <Link href="/farmer/profile" onClick={() => setMobileOpen(false)}>
           <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer">
             <Avatar className="w-9 h-9 border border-border">
-              <AvatarFallback className="bg-primary/20 text-primary font-semibold">FM</AvatarFallback>
+              <AvatarFallback className="bg-primary/20 text-primary font-semibold">
+                {user?.name?.substring(0, 2).toUpperCase() || 'FM'}
+              </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex flex-col truncate">
-                <span className="text-sm font-semibold truncate text-foreground">Ramesh Kumar</span>
+                <span className="text-sm font-semibold truncate text-foreground">{user?.name || 'Loading...'}</span>
                 <span className="text-xs text-muted-foreground truncate">Farmer Account</span>
               </div>
             )}
           </div>
         </Link>
+        <Button variant="ghost" className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-start gap-3 px-2'} hover:bg-destructive/10 hover:text-destructive transition-colors`} onClick={logout}>
+          <LogOut size={20} className="shrink-0" />
+          {!collapsed && <span>Log out</span>}
+        </Button>
       </div>
     </div>
   );
 
   return (
-    <div className="h-screen w-full flex bg-background overflow-hidden selection:bg-primary/20 selection:text-primary">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block h-full z-20">
-        <Sidebar />
-      </div>
-
-      {/* Mobile Sidebar Overlay */}
-      {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <motion.div 
-            initial={{ x: -300 }}
-            animate={{ x: 0 }}
-            exit={{ x: -300 }}
-            className="relative w-64 h-full z-50"
-          >
-            <Sidebar isMobile />
-          </motion.div>
+    <ProtectedRoute allowedRoles={['farmer']}>
+      <div className="h-screen w-full flex bg-background overflow-hidden selection:bg-primary/20 selection:text-primary">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block h-full z-20">
+          <Sidebar />
         </div>
-      )}
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -z-10" />
-        
-        {/* Topbar */}
-        <header className="h-20 glass border-b border-border/50 flex items-center justify-between px-4 lg:px-8 shrink-0 z-10">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
-              <Menu size={24} />
-            </Button>
-            <h1 className="font-heading font-bold text-xl lg:text-2xl text-foreground">
-              {navItems.find(i => i.href === pathname)?.name || 'Dashboard'}
-            </h1>
+        {/* Mobile Sidebar Overlay */}
+        {mobileOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+            <motion.div 
+              initial={{ x: -300 }}
+              animate={{ x: 0 }}
+              exit={{ x: -300 }}
+              className="relative w-64 h-full z-50"
+            >
+              <Sidebar isMobile />
+            </motion.div>
           </div>
+        )}
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+          <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -z-10" />
           
-          <div className="flex items-center gap-3">
-            {/* Real Notification Bell with mock user ID */}
-            <NotificationBell userId="mock-farmer-id" />
+          {/* Topbar */}
+          <header className="h-20 glass border-b border-border/50 flex items-center justify-between px-4 lg:px-8 shrink-0 z-10">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
+                <Menu size={24} />
+              </Button>
+              <h1 className="font-heading font-bold text-xl lg:text-2xl text-foreground">
+                {navItems.find(i => i.href === pathname)?.name || 'Dashboard'}
+              </h1>
+            </div>
             
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Settings className="w-5 h-5 text-muted-foreground" />
-            </Button>
-          </div>
-        </header>
+            <div className="flex items-center gap-3">
+              {/* Real Notification Bell with real user ID */}
+              <NotificationBell userId={user?._id || 'mock-farmer-id'} />
+              
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <Settings className="w-5 h-5 text-muted-foreground" />
+              </Button>
+            </div>
+          </header>
 
-        {/* Scrollable Main View */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative z-0">
-          {children}
-        </main>
+          {/* Scrollable Main View */}
+          <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative z-0">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

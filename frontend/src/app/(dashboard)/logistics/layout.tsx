@@ -14,10 +14,14 @@ import {
   ChevronRight,
   Menu,
   Navigation
+,
+  LogOut
 } from 'lucide-react';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 
 const navItems = [
@@ -32,6 +36,7 @@ export default function LogisticsLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -86,22 +91,29 @@ export default function LogisticsLayout({
         <Link href="/logistics/profile" onClick={() => setMobileOpen(false)}>
           <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer">
             <Avatar className="w-9 h-9 border border-border">
-              <AvatarFallback className="bg-primary/20 text-primary font-semibold">TR</AvatarFallback>
+              <AvatarFallback className="bg-primary/20 text-primary font-semibold">
+                {user?.name?.substring(0, 2).toUpperCase() || 'LO'}
+              </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex flex-col truncate">
-                <span className="text-sm font-semibold truncate text-foreground">Express Transit</span>
+                <span className="text-sm font-semibold truncate text-foreground">{user?.name || 'Loading...'}</span>
                 <span className="text-xs text-muted-foreground truncate">Logistics Partner</span>
               </div>
             )}
           </div>
         </Link>
+        <Button variant="ghost" className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-start gap-3 px-2'} hover:bg-destructive/10 hover:text-destructive transition-colors`} onClick={logout}>
+          <LogOut size={20} className="shrink-0" />
+          {!collapsed && <span>Log out</span>}
+        </Button>
       </div>
     </div>
   );
 
   return (
-    <div className="h-screen w-full flex bg-background overflow-hidden selection:bg-primary/20 selection:text-primary">
+    <ProtectedRoute allowedRoles={['logistics']}>
+      <div className="h-screen w-full flex bg-background overflow-hidden selection:bg-primary/20 selection:text-primary">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block h-full z-20">
         <Sidebar />
@@ -154,5 +166,6 @@ export default function LogisticsLayout({
         </main>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

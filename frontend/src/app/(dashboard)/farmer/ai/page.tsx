@@ -85,19 +85,58 @@ export default function KrishiSathiAIPage() {
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize welcome message based on language if messages are empty
+  // Initialize welcome message based on language and fetch history
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
+    const fetchHistory = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch(`/api/ai/history`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.data.length > 0) {
+          const historyMessages = data.data.flatMap((interaction: any) => {
+            const msgs = [];
+            if (interaction.inputText) {
+              msgs.push({
+                id: `user-${interaction._id}`,
+                sender: 'user',
+                text: interaction.inputText,
+                timestamp: new Date(interaction.createdAt)
+              });
+            }
+            if (interaction.responseText) {
+              msgs.push({
+                id: `ai-${interaction._id}`,
+                sender: 'ai',
+                text: interaction.responseText,
+                timestamp: new Date(interaction.createdAt)
+              });
+            }
+            return msgs;
+          });
+          setMessages(historyMessages);
+        } else {
+          setMessages([{
+            id: 'welcome',
+            sender: 'ai',
+            text: t.welcome,
+            timestamp: new Date()
+          }]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch AI history:', error);
+        setMessages([{
           id: 'welcome',
           sender: 'ai',
           text: t.welcome,
           timestamp: new Date()
-        }
-      ]);
-    }
-  }, [language]);
+        }]);
+      }
+    };
+    fetchHistory();
+  }, [language, t.welcome]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -122,7 +161,7 @@ export default function KrishiSathiAIPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ai/chat`, {
+      const res = await fetch(`/api/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

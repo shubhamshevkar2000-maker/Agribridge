@@ -2,19 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Phone, MapPin, ShieldCheck, Landmark, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, ShieldCheck, Landmark, CheckCircle2, Edit2, Save, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', locationX: '', locationY: '' });
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, {
+        const res = await fetch(`/api/auth/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -22,6 +25,12 @@ export default function ProfilePage() {
         const json = await res.json();
         if (json.success) {
           setProfile(json.data);
+          setEditForm({
+            name: json.data.name || '',
+            phone: json.data.phone || '',
+            locationX: json.data.location?.coordinates?.[0] || '',
+            locationY: json.data.location?.coordinates?.[1] || ''
+          });
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
@@ -31,6 +40,31 @@ export default function ProfilePage() {
     };
     fetchProfile();
   }, []);
+
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/auth/me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: editForm.name,
+          phone: editForm.phone,
+          location: { coordinates: [Number(editForm.locationX), Number(editForm.locationY)] }
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProfile(data.data);
+        setIsEditing(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   if (isLoading) {
     return <div className="p-8 text-center">Loading profile...</div>;
@@ -58,13 +92,45 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="glass-card border-border/50">
+        <Card className="glass-card border-border/50 relative">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute top-4 right-4" 
+            onClick={() => setIsEditing(!isEditing)}
+          >
+            {isEditing ? <X className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+          </Button>
           <CardHeader>
             <CardTitle>Account Details</CardTitle>
             <CardDescription>Personal information associated with your account</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
+            {isEditing ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Full Name</label>
+                  <Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Phone Number</label>
+                  <Input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Longitude</label>
+                    <Input type="number" value={editForm.locationX} onChange={e => setEditForm({...editForm, locationX: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Latitude</label>
+                    <Input type="number" value={editForm.locationY} onChange={e => setEditForm({...editForm, locationY: e.target.value})} />
+                  </div>
+                </div>
+                <Button className="w-full" onClick={handleSave}><Save className="w-4 h-4 mr-2"/> Save Changes</Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
               <Mail className="w-5 h-5 text-muted-foreground" />
               <div>
                 <div className="text-xs text-muted-foreground">Email Address</div>
@@ -88,6 +154,8 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
+            )}
+              </>
             )}
           </CardContent>
         </Card>

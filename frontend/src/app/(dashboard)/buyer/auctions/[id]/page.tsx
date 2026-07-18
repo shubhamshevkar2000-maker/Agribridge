@@ -42,7 +42,7 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
           setCurrentUserId(payload.id);
         }
 
-        const res = await fetch(`http://localhost:5000/api/auctions/${auctionId}`, {
+        const res = await fetch(`/api/auctions/${auctionId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -78,7 +78,7 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
     fetchAuction();
 
     // Connect to WebSocket
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io("");
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -140,7 +140,7 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
     if (currentUserId) {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:5000/api/auctions/${auctionId}/bid`, {
+        const res = await fetch(`/api/auctions/${auctionId}/bid`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

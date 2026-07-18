@@ -156,3 +156,27 @@ export const getMe = async (req: any, res: Response) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const updateMe = async (req: any, res: Response) => {
+  try {
+    const { name, email, phone, location } = req.body;
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (phone) updateData.phone = phone;
+    if (location && location.coordinates) {
+      updateData.location = {
+        type: 'Point',
+        coordinates: location.coordinates
+      };
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, updateData, { new: true }).select('-passwordHash');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, data: user, message: 'Profile updated successfully' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

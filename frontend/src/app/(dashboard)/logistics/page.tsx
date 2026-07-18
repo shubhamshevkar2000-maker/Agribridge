@@ -26,34 +26,39 @@ import { useState, useEffect } from "react";
 
 export default function LogisticsDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
+  const [assignedDeliveries, setAssignedDeliveries] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchPools = async () => {
       try {
-<<<<<<< ours
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/deliveries/pool`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-=======
         const token =
           localStorage.getItem("token") ||
           localStorage.getItem("agribridge_token");
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/deliveries/pool`,
+          `/api/deliveries/pool`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           },
         );
->>>>>>> theirs
+        const resAssigned = await fetch(
+          `/api/deliveries/assigned`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
         const json = await res.json();
+        const jsonAssigned = await resAssigned.json();
+        
         if (json.success) {
           setDashboardData(json.data);
+        }
+        if (jsonAssigned.success) {
+          setAssignedDeliveries(jsonAssigned.data);
         }
       } catch (err) {
         console.error("Error fetching pools:", err);
@@ -64,20 +69,35 @@ export default function LogisticsDashboard() {
     fetchPools();
   }, []);
 
+  const handleStatusUpdate = async (id: string, status: string) => {
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("agribridge_token");
+      const res = await fetch(`/api/deliveries/${id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Refresh the assigned list
+        setAssignedDeliveries(prev => prev.map(d => d._id === id ? { ...d, status } : d));
+      } else {
+        alert(data.message || "Failed to update status");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const pools = dashboardData || [];
 
   return (
-<<<<<<< ours
-    <div className="flex flex-col lg:flex-row gap-8 max-w-[1600px] mx-auto">
-      
-      {/* Left Column: Itinerary */}
-      <div className="w-full lg:w-96 shrink-0 flex flex-col gap-6 pr-2 pb-8">
-        
-=======
     <div className="flex flex-col lg:flex-row gap-8 max-w-[1600px] mx-auto h-[calc(100vh-8rem)]">
       {/* Left Column: Itinerary */}
       <div className="w-full lg:w-96 shrink-0 flex flex-col gap-6 h-full overflow-y-auto pr-2 pb-8">
->>>>>>> theirs
         <Card className="glass-card border-border/50">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl font-heading">
@@ -92,20 +112,13 @@ export default function LogisticsDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-<<<<<<< ours
-            
-=======
->>>>>>> theirs
+
             {pools.length > 0 && (
               <div className="flex items-center gap-4 p-3 bg-secondary/50 rounded-xl border border-border/50">
                 <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
                   <Truck className="w-5 h-5" />
                 </div>
                 <div>
-<<<<<<< ours
-                  <div className="font-semibold text-sm">Vehicle: Pooled Truck</div>
-                  <div className="text-xs text-muted-foreground">Driver: Route Assigned</div>
-=======
                   <div className="font-semibold text-sm">
                     Vehicle:{" "}
                     {pools[0]?.vehicleId?.registrationNumber || "Unassigned"}
@@ -113,7 +126,6 @@ export default function LogisticsDashboard() {
                   <div className="text-xs text-muted-foreground">
                     Driver: {pools[0]?.driverId?.name || "Unassigned"}
                   </div>
->>>>>>> theirs
                 </div>
               </div>
             )}
@@ -187,78 +199,53 @@ export default function LogisticsDashboard() {
       <div className="flex-1 flex flex-col min-h-[400px] lg:min-h-[500px] overflow-hidden rounded-3xl border border-border/50 bg-secondary/20 relative">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cartographer.png')] opacity-20 dark:opacity-5 mix-blend-overlay pointer-events-none" />
 
-        {pools.length > 0 ? (
-          <>
-            {/* Mock Map UI overlay */}
-            <div className="absolute top-4 left-4 z-10 glass-card p-4 rounded-xl border border-border/50 shadow-lg">
-              <h3 className="font-heading font-bold mb-1">Live Tracking</h3>
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                <Navigation className="w-3.5 h-3.5 text-blue-500" /> Navigating
-                to next stop
+        <div className="relative z-10 p-6 flex flex-col h-full overflow-y-auto">
+          <h2 className="text-2xl font-heading font-bold mb-4 flex items-center gap-2">
+            <CheckCircle className="text-primary w-6 h-6" /> Assigned Deliveries
+          </h2>
+          
+          {assignedDeliveries.length > 0 ? (
+            <div className="space-y-4">
+              {assignedDeliveries.map((delivery) => (
+                <Card key={delivery._id} className="glass-card border-border/50">
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Delivery #{delivery._id.substring(0, 8)}</CardTitle>
+                      <CardDescription>
+                        Crop: {delivery.orderId?.cropId?.name || "Unknown"} ({delivery.orderId?.cropId?.quantity} {delivery.orderId?.cropId?.unit})
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="uppercase">
+                      {delivery.status.replace('_', ' ')}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm space-y-1 mb-4">
+                      <p><strong>From:</strong> {delivery.orderId?.farmerId?.name || "Unknown Farmer"} ({delivery.orderId?.farmerId?.location?.coordinates?.join(", ") || "N/A"})</p>
+                      <p><strong>To:</strong> {delivery.orderId?.buyerId?.name || "Unknown Buyer"} ({delivery.orderId?.buyerId?.location?.coordinates?.join(", ") || "N/A"})</p>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant={delivery.status === 'pending' ? 'default' : 'outline'} onClick={() => handleStatusUpdate(delivery._id, 'pending')}>Pending</Button>
+                      <Button size="sm" variant={delivery.status === 'in_transit' ? 'default' : 'outline'} onClick={() => handleStatusUpdate(delivery._id, 'in_transit')}>In Transit</Button>
+                      <Button size="sm" variant={delivery.status === 'delivered' ? 'default' : 'outline'} onClick={() => handleStatusUpdate(delivery._id, 'delivered')}>Delivered</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 mt-12">
+              <MapPin className="w-16 h-16 text-muted-foreground/30 mb-4" />
+              <h3 className="text-xl font-heading font-bold mb-2">
+                No Deliveries Assigned
+              </h3>
+              <p className="text-muted-foreground max-w-sm">
+                You currently have no active deliveries assigned to your fleet.
               </p>
             </div>
-
-            <div className="absolute bottom-4 right-4 z-10">
-              <Button className="bg-primary-gradient shadow-lg">
-                <Navigation className="w-4 h-4 mr-2" /> Open in Maps
-              </Button>
-            </div>
-
-            {/* Central Map Illustration Mock */}
-            <div className="flex-1 flex items-center justify-center relative overflow-hidden">
-              {/* Connecting Line */}
-              <svg
-                className="absolute inset-0 w-full h-full pointer-events-none"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d="M 30% 40% Q 50% 20% 70% 60%"
-                  fill="none"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="4"
-                  strokeDasharray="8 8"
-                  className="animate-[dash_20s_linear_infinite]"
-                />
-              </svg>
-
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2 }}
-                className="absolute left-[30%] top-[40%] w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white shadow-lg -translate-x-1/2 -translate-y-1/2"
-              >
-                <CheckCircle className="w-4 h-4" />
-              </motion.div>
-
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.4 }}
-                className="absolute left-[50%] top-[30%] w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(59,130,246,0.6)] -translate-x-1/2 -translate-y-1/2 animate-bounce"
-              >
-                <Truck className="w-4 h-4" />
-              </motion.div>
-
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.6 }}
-                className="absolute left-[70%] top-[60%] w-6 h-6 rounded-full bg-background border-4 border-destructive shadow-lg -translate-x-1/2 -translate-y-1/2"
-              />
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-            <MapPin className="w-16 h-16 text-muted-foreground/30 mb-4" />
-            <h3 className="text-xl font-heading font-bold mb-2">
-              Map Unavailable
-            </h3>
-            <p className="text-muted-foreground max-w-sm">
-              Your map will appear here once you have an active route assigned
-              to your fleet.
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

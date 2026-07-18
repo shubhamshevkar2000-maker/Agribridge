@@ -8,26 +8,115 @@ import { Delivery } from '../models/Delivery';
 
 const router = Router();
 
+import { Crop } from '../models/Crop';
+import { Notification } from '../models/Notification';
+import { Transaction } from '../models/Transaction';
+
 router.get('/farmer', protect, async (req: any, res) => {
   try {
     const userId = req.user.id;
-    
-    // Fetch real data from MongoDB for this specific user
-    const orders = await Order.find({ farmerId: userId, paymentStatus: 'completed' });
-    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-    
-    const activeAuctions = await Auction.find({ farmerId: userId, status: 'live' });
-    
     const user = await User.findById(userId);
     
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // 1. Fetch Revenue Stats (Today, Monthly, Total)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    const orders = await Order.find({ farmerId: userId, paymentStatus: 'completed' }).populate('cropId');
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const monthlyRevenue = orders
+      .filter(o => new Date(o.createdAt) >= startOfMonth)
+      .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const todayRevenue = orders
+      .filter(o => new Date(o.createdAt) >= today)
+      .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+    // 2. Fetch Inventory Stats
+    const crops = await Crop.find({ farmerId: userId, status: 'listed' });
+    const totalCrops = crops.length;
+    const availableStock = crops.reduce((sum, crop) => sum + (crop.quantity || 0), 0);
+    const lowStock = crops.filter(c => c.quantity < 50).length;
+
+    // 3. Fetch Marketplace Stats
+    // Assuming active listings = crops
+    const activeListings = totalCrops;
+    
+    // 4. Fetch Auction Stats
+    const activeAuctions = await Auction.find({ farmerId: userId, status: 'live' }).populate('cropId').sort({ endTime: 1 });
+    
+    // 5. Fetch Delivery Stats
+    const activeDeliveries = await Delivery.find({ 
+      orderId: { $in: orders.map(o => o._id) },
+      status: { $in: ['unassigned', 'accepted', 'picked_up', 'in_transit'] } 
+    }).populate({ path: 'orderId', populate: { path: 'cropId' } });
+    
+    const deliveriesCount = {
+      pending: activeDeliveries.filter(d => ['unassigned', 'accepted'].includes(d.status)).length,
+      pickedUp: activeDeliveries.filter(d => d.status === 'picked_up').length,
+      inTransit: activeDeliveries.filter(d => d.status === 'in_transit').length,
+      delivered: await Delivery.countDocuments({ 
+        orderId: { $in: orders.map(o => o._id) }, 
+        status: 'delivered' 
+      })
+    };
+
+    // 6. Fetch Notifications
+    const notifications = await Notification.find({ userId: userId }).sort({ createdAt: -1 }).limit(10);
+    const unreadNotifications = notifications.filter(n => !n.isRead).length;
+
+    // 7. Fetch Recent Activity
+    const recentActivity = await Transaction.find({ payeeId: userId, status: 'success' })
+      .sort({ timestamp: -1 })
+      .limit(5)
+      .populate('payerId', 'name');
+
     res.json({
       success: true,
       data: {
-        revenue: totalRevenue,
-        activeAuctionsCount: activeAuctions.length,
-        trustScore: user?.trustScore || 300, // Base score
-        creditScore: user?.creditScore || 300,
-        liveAuctions: activeAuctions
+        farmer: {
+          name: user.name,
+          village: user.location?.address || 'N/A',
+          district: user.location?.city || 'N/A',
+          state: user.location?.state || 'N/A',
+          profileImage: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2ecc71&color=fff`
+        },
+        walletBalance: user.walletBalance || 0,
+        trustScore: user.trustScore || 300,
+        creditScore: user.creditScore || 300,
+        revenue: {
+          total: totalRevenue,
+          monthly: monthlyRevenue,
+          today: todayRevenue,
+          growth: 12 // Mock growth percentage for demo
+        },
+        inventory: {
+          totalCrops,
+          availableStock,
+          lowStock,
+          soldToday: orders.filter(o => new Date(o.createdAt) >= today).reduce((sum, o) => sum + o.quantity, 0)
+        },
+        marketplace: {
+          activeListings,
+          views: activeListings * 142, // Mock views for demo
+          interestedBuyers: activeListings * 12,
+          averagePrice: crops.length > 0 ? crops.reduce((sum, c) => sum + (c.pricePerUnit || 0), 0) / crops.length : 0
+        },
+        auctions: {
+          count: activeAuctions.length,
+          live: activeAuctions
+        },
+        deliveries: deliveriesCount,
+        recentDeliveries: activeDeliveries.slice(0, 5),
+        notifications: {
+          list: notifications,
+          unreadCount: unreadNotifications
+        },
+        recentOrders: orders.slice(0, 5),
+        recentActivity
       }
     });
   } catch (error: any) {
