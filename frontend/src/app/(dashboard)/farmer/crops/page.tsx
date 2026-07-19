@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
+<<<<<<< HEAD
 import { CropImage } from '@/components/ui/crop-image';
+=======
+import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
+>>>>>>> nidhi/logistics-enhancement
 
 interface Crop {
   _id: string;
@@ -348,8 +352,13 @@ export default function MyCropsPage() {
               <Card className="glass-card border-border/50 rounded-2xl hover:border-primary/30 transition-all group overflow-hidden flex flex-col h-full">
                 {/* Crop Image container */}
                 <div className="relative h-48 overflow-hidden bg-muted flex items-center justify-center shrink-0">
+<<<<<<< HEAD
                   <CropImage 
                     images={crop.images} 
+=======
+                  <img 
+                    src={getValidImageUrl(crop.images?.[0], crop.name)} 
+>>>>>>> nidhi/logistics-enhancement
                     alt={crop.name} 
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                   />

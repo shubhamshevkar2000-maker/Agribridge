@@ -4,17 +4,29 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Globe } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
+import { languageNames, Language } from '@/lib/translations';
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const { language, setLanguage, t } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const navItems = [
+    { key: 'navProduct' as const, href: '#product' },
+    { key: 'navMarketplace' as const, href: '#marketplace' },
+    { key: 'navPricing' as const, href: '#pricing' },
+    { key: 'navHowItWorks' as const, href: '#how-it-works' },
+    { key: 'navFAQ' as const, href: '#faq' },
+  ];
 
   return (
     <motion.header
@@ -37,24 +49,55 @@ export function Navbar() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8">
-          {['Product', 'Marketplace', 'Pricing', 'How It Works', 'FAQ'].map((item) => (
+          {navItems.map((item) => (
             <Link
-              key={item}
-              href={`#${item.toLowerCase().replace(/ /g, '-')}`}
+              key={item.key}
+              href={item.href}
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              {item}
+              {t(item.key)}
             </Link>
           ))}
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
+          {/* Language Switcher */}
+          <div className="relative">
+            <button
+              onClick={() => setLangMenuOpen(!langMenuOpen)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+            >
+              <Globe className="w-4 h-4" />
+              {languageNames[language]}
+            </button>
+            {langMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setLangMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-50 glass-card border border-border/50 rounded-xl shadow-xl overflow-hidden min-w-[140px]">
+                  {(['en', 'hi', 'mr'] as Language[]).map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => { setLanguage(lang); setLangMenuOpen(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+                        language === lang
+                          ? 'bg-primary text-white'
+                          : 'text-foreground hover:bg-secondary/50'
+                      }`}
+                    >
+                      {languageNames[lang]}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
           <Link href="/login">
-            <Button variant="ghost">Log In</Button>
+            <Button variant="ghost">{t('navLogin')}</Button>
           </Link>
           <Link href="/signup">
             <Button className="bg-primary-gradient hover:opacity-90 transition-opacity">
-              Get Started
+              {t('navGetStarted')}
             </Button>
           </Link>
         </div>
@@ -76,22 +119,45 @@ export function Navbar() {
           exit={{ opacity: 0, height: 0 }}
           className="md:hidden glass border-t border-border px-6 py-4 flex flex-col gap-4"
         >
-          {['Product', 'Marketplace', 'Pricing', 'How It Works', 'FAQ'].map((item) => (
+          {navItems.map((item) => (
             <Link
-              key={item}
-              href={`#${item.toLowerCase().replace(/ /g, '-')}`}
+              key={item.key}
+              href={item.href}
               className="text-sm font-medium text-foreground py-2 border-b border-border/50"
               onClick={() => setMobileMenuOpen(false)}
             >
-              {item}
+              {t(item.key)}
             </Link>
           ))}
+
+          {/* Mobile Language Switcher */}
+          <div className="py-2 border-b border-border/50">
+            <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" /> {t('langLabel')}
+            </p>
+            <div className="flex gap-2">
+              {(['en', 'hi', 'mr'] as Language[]).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => { setLanguage(lang); setMobileMenuOpen(false); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    language === lang
+                      ? 'bg-primary text-white'
+                      : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {languageNames[lang]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex flex-col gap-2 pt-2">
             <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="outline" className="w-full">Log In</Button>
+              <Button variant="outline" className="w-full">{t('navLogin')}</Button>
             </Link>
             <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
-              <Button className="w-full bg-primary-gradient">Get Started</Button>
+              <Button className="w-full bg-primary-gradient">{t('navGetStarted')}</Button>
             </Link>
           </div>
         </motion.div>

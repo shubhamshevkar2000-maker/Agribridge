@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Leaf, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '@/context/LanguageContext';
 
 export function Hero() {
+  const { t } = useLanguage();
+
   return (
     <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
       {/* Background glowing blobs */}
@@ -21,26 +24,26 @@ export function Hero() {
           className="flex flex-col gap-6 items-start"
         >
           <Badge variant="outline" className="glass px-4 py-1.5 rounded-full text-sm font-medium border-primary/20 text-primary dark:text-accent">
-            ✨ Trusted by 10,000+ Farmers
+            ✨ {t('heroBadge')}
           </Badge>
           
           <h1 className="text-5xl lg:text-7xl font-heading font-extrabold leading-[1.1] tracking-tight text-foreground">
-            Empowering Farmers Through <span className="text-gradient">AI & Direct Access</span>
+            {t('heroTitle1')} <span className="text-gradient">{t('heroTitle2')}</span>
           </h1>
           
           <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-xl">
-            A unified ecosystem bringing real-time auctions, smart logistics, AI crop advisory, and institutional credit directly to your farm.
+            {t('heroDesc')}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full sm:w-auto">
             <Link href="/signup?role=farmer">
               <Button size="lg" className="w-full sm:w-auto bg-primary-gradient text-white h-14 px-8 text-base rounded-xl hover:scale-[1.02] transition-transform">
-                Join as Farmer <ArrowRight className="ml-2 w-5 h-5" />
+                {t('heroJoinFarmer')} <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
             <Link href="/marketplace">
               <Button size="lg" variant="outline" className="w-full sm:w-auto glass-card h-14 px-8 text-base rounded-xl hover:scale-[1.02] transition-transform">
-                Explore Marketplace
+                {t('heroExploreMarket')}
               </Button>
             </Link>
           </div>
@@ -59,11 +62,11 @@ export function Hero() {
             className="absolute top-10 right-10 z-20 w-64 glass-card p-4 rounded-2xl"
           >
             <div className="flex justify-between items-center mb-4">
-              <div className="font-heading font-semibold text-sm">Live Auction</div>
-              <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
+              <div className="font-heading font-semibold text-sm">{t('heroLiveAuction')}</div>
+              <Badge variant="destructive" className="animate-pulse">{t('heroLIVE')}</Badge>
             </div>
             <div className="text-3xl font-bold mb-1">₹4,250<span className="text-sm text-muted-foreground font-normal">/qtl</span></div>
-            <div className="text-xs text-muted-foreground mb-4">Current Highest Bid</div>
+            <div className="text-xs text-muted-foreground mb-4">{t('heroHighestBid')}</div>
             <div className="h-2 bg-secondary rounded-full overflow-hidden">
               <div className="h-full bg-accent w-3/4" />
             </div>
@@ -79,12 +82,12 @@ export function Hero() {
                 <Leaf className="w-6 h-6" />
               </div>
               <div>
-                <div className="font-heading font-semibold">KrishiSathi AI</div>
-                <div className="text-xs text-muted-foreground">Crop Advisory Active</div>
+                <div className="font-heading font-semibold">{t('heroKrishiSathi')}</div>
+                <div className="text-xs text-muted-foreground">{t('heroCropAdvisory')}</div>
               </div>
             </div>
             <div className="mt-4 p-3 bg-secondary/50 rounded-xl text-sm leading-relaxed border border-border/50">
-              "Tomato prices are trending 12% higher this week in your district. Good time to list!"
+              {t('heroTomatoTip')}
             </div>
           </motion.div>
 
@@ -95,10 +98,10 @@ export function Hero() {
           >
             <div className="flex items-center gap-2 text-primary mb-2">
               <TrendingUp className="w-4 h-4" />
-              <span className="text-xs font-semibold">Trust Score</span>
+              <span className="text-xs font-semibold">{t('heroTrustScore')}</span>
             </div>
             <div className="text-4xl font-heading font-bold">850</div>
-            <div className="text-xs text-muted-foreground mt-1">Excellent Tier</div>
+            <div className="text-xs text-muted-foreground mt-1">{t('heroExcellentTier')}</div>
           </motion.div>
 
           {/* Central decorative element */}

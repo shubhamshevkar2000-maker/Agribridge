@@ -4,7 +4,11 @@ import { useState, useEffect, useRef, use } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, TrendingUp, CheckCircle, Gavel, ArrowLeft } from 'lucide-react';
+<<<<<<< HEAD
 import { CropImage } from '@/components/ui/crop-image';
+=======
+import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
+>>>>>>> nidhi/logistics-enhancement
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -189,8 +193,13 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
           <Card className="glass-card border-border/50">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-6">
+<<<<<<< HEAD
                 <CropImage 
                   images={auction.cropId?.images} 
+=======
+                <img 
+                  src={getValidImageUrl(auction.cropId?.images?.[0], auction.cropId?.name)} 
+>>>>>>> nidhi/logistics-enhancement
                   alt={auction.cropId?.name || "Crop"} 
                   className="w-full sm:w-48 h-48 rounded-xl object-cover shrink-0"
                 />

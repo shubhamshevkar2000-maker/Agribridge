@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
+import { TranslationKey } from '@/lib/translations';
 
-const stats = [
-  { label: 'Farmers Onboarded', value: 12500, suffix: '+' },
-  { label: 'Crops Sold (Tons)', value: 45000, suffix: '+' },
-  { label: 'Value Transacted', value: 850, prefix: '₹', suffix: 'Cr+' },
-  { label: 'Loans Disbursed', value: 120, prefix: '₹', suffix: 'Cr+' },
+const statConfig = [
+  { value: 12500, suffix: '+', labelKey: 'statFarmers' as TranslationKey },
+  { value: 45000, suffix: '+', labelKey: 'statCrops' as TranslationKey },
+  { value: 850, prefix: '₹', suffix: 'Cr+', labelKey: 'statValue' as TranslationKey },
+  { value: 120, prefix: '₹', suffix: 'Cr+', labelKey: 'statLoans' as TranslationKey },
 ];
 
 function CountUp({ end, prefix = '', suffix = '' }: { end: number, prefix?: string, suffix?: string }) {
@@ -23,7 +25,6 @@ function CountUp({ end, prefix = '', suffix = '' }: { end: number, prefix?: stri
       const step = (timestamp: number) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        // easeOutQuart
         const easeProgress = 1 - Math.pow(1 - progress, 4);
         setCount(Math.floor(easeProgress * end));
         if (progress < 1) {
@@ -42,6 +43,13 @@ function CountUp({ end, prefix = '', suffix = '' }: { end: number, prefix?: stri
 }
 
 export function Stats() {
+  const { t } = useLanguage();
+
+  const stats = statConfig.map(stat => ({
+    ...stat,
+    label: t(stat.labelKey),
+  }));
+
   return (
     <section className="py-16 border-y border-border/50 bg-secondary/30 relative">
       <div className="container mx-auto px-6">

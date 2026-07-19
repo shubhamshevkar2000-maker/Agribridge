@@ -24,8 +24,11 @@ export function NotificationBell({ userId }: { userId: string }) {
   const [toastNotification, setToastNotification] = useState<Notification | null>(null);
 
   useEffect(() => {
-    // Connect to the backend socket server
-    const newSocket = io("");
+    // Determine correct WebSocket connection URL with port 5000 fallback for localhost
+    const socketUrl = typeof window !== 'undefined' 
+      ? (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '') 
+      : '';
+    const newSocket = io(socketUrl);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {

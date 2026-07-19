@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Gavel, Clock, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { getValidImageUrl } from '@/utils/cropImages';
 import { Button } from '@/components/ui/button';
 
 interface Auction {
@@ -16,6 +17,7 @@ interface Auction {
     category: string;
     quantity: number;
     unit: string;
+    images?: string[];
   };
   farmerId: {
     name: string;
@@ -100,9 +102,11 @@ export default function BuyerAuctionsPage() {
               <Link href={`/buyer/auctions/${auction._id}`}>
                 <Card className="glass-card hover:shadow-lg transition-all border border-border/50 group h-full flex flex-col justify-between overflow-hidden rounded-2xl">
                   <div className="relative h-40 bg-secondary/30 flex items-center justify-center overflow-hidden">
-                    <span className="text-muted-foreground/30 font-bold text-3xl uppercase">
-                      {auction.cropId?.category || 'Crop'}
-                    </span>
+                    <img 
+                      src={getValidImageUrl(auction.cropId?.images?.[0], auction.cropId?.name)} 
+                      alt={auction.cropId?.name || 'Crop'}
+                      className="w-full h-full object-cover"
+                    />
                     <Badge className="absolute top-4 right-4 bg-red-500 text-white animate-pulse">
                       LIVE
                     </Badge>

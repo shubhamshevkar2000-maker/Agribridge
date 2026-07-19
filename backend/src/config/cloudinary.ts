@@ -6,4 +6,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET || 'api_secret'
 });
 
+// Safe upload wrapper that falls back to returning the base64 string
+export const safeUpload = async (image: string, options: any) => {
+  if (!process.env.CLOUDINARY_API_KEY || process.env.CLOUDINARY_API_KEY === 'api_key') {
+    return { secure_url: image };
+  }
+  return await cloudinary.uploader.upload(image, options);
+};
+
 export default cloudinary;

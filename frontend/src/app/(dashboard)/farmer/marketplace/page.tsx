@@ -4,7 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, Filter, MapPin, Star, ShieldCheck, Heart } from 'lucide-react';
+<<<<<<< HEAD
 import { CropImage } from '@/components/ui/crop-image';
+=======
+import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
+>>>>>>> nidhi/logistics-enhancement
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -182,8 +186,13 @@ export default function MarketplacePage() {
                     <Link href={`/farmer/marketplace/${crop._id}`}>
                       <Card className="glass-card overflow-hidden border-border/50 hover:shadow-lg hover:border-primary/30 transition-all group h-full flex flex-col cursor-pointer">
                         <div className="relative h-48 overflow-hidden bg-muted flex items-center justify-center">
+<<<<<<< HEAD
                           <CropImage 
                             images={crop.images} 
+=======
+                          <img 
+                            src={getValidImageUrl(crop.images?.[0], crop.name)} 
+>>>>>>> nidhi/logistics-enhancement
                             alt={crop.name} 
                             className="w-full h-full object-cover" 
                           />

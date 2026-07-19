@@ -8,7 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+<<<<<<< HEAD
 import { CropImage } from '@/components/ui/crop-image';
+=======
+import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
+>>>>>>> nidhi/logistics-enhancement
 
 interface Crop {
   _id: string;
@@ -573,6 +577,7 @@ export default function InventoryPage() {
                     <tr key={crop._id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
                       <td className="px-6 py-4 font-medium text-foreground">
                         <div className="flex items-center gap-3">
+<<<<<<< HEAD
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0 border border-border/30">
                             <CropImage 
                               images={crop.images} 
@@ -580,6 +585,14 @@ export default function InventoryPage() {
                               className="w-full h-full object-cover" 
                             />
                           </div>
+=======
+                          <img 
+                            src={getValidImageUrl(crop.images?.[0], crop.name)} 
+                            alt={crop.name} 
+                            className="w-10 h-10 object-cover rounded-lg bg-muted shrink-0 border border-border/30" 
+                            loading="lazy" 
+                          />
+>>>>>>> nidhi/logistics-enhancement
                           <div className="flex flex-col">
                             <span className="flex items-center gap-2">
                               {crop.name}
