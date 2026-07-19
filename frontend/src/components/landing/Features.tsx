@@ -3,50 +3,31 @@
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Gavel, Truck, Cpu, ShieldCheck, Store, Mic } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
+import { TranslationKey } from '@/lib/translations';
 
-const features = [
-  {
-    title: 'Live Auctions',
-    description: 'Bypass middlemen and sell your harvest through real-time bidding to verified buyers.',
-    icon: Gavel,
-  },
-  {
-    title: 'Smart Logistics',
-    description: 'Optimize multi-farmer pickup routes and share truck costs transparently.',
-    icon: Truck,
-  },
-  {
-    title: 'KrishiSathi AI',
-    description: 'Get instant crop advisory, disease detection, and price predictions in your local language.',
-    icon: Cpu,
-  },
-  {
-    title: 'AgriCredit Scoring',
-    description: 'Build a trustworthy credit profile based on your transaction history to access institutional loans.',
-    icon: ShieldCheck,
-  },
-  {
-    title: 'Direct Marketplace',
-    description: 'A nationwide platform connecting farmers and bulk buyers securely and transparently.',
-    icon: Store,
-  },
-  {
-    title: 'Multilingual Voice AI',
-    description: 'Interact with the platform using simple voice commands in English, Hindi, and Marathi.',
-    icon: Mic,
-  },
-];
+const featureIcons = [Gavel, Truck, Cpu, ShieldCheck, Store, Mic];
+const featureTitleKeys: TranslationKey[] = ['feature1Title', 'feature2Title', 'feature3Title', 'feature4Title', 'feature5Title', 'feature6Title'];
+const featureDescKeys: TranslationKey[] = ['feature1Desc', 'feature2Desc', 'feature3Desc', 'feature4Desc', 'feature5Desc', 'feature6Desc'];
 
 export function Features() {
+  const { t } = useLanguage();
+
+  const features = featureIcons.map((icon, i) => ({
+    title: t(featureTitleKeys[i]),
+    description: t(featureDescKeys[i]),
+    icon,
+  }));
+
   return (
     <section id="product" className="py-24 relative overflow-hidden">
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl md:text-5xl font-heading font-bold mb-6">
-            A Complete <span className="text-gradient">Agri-Ecosystem</span>
+            {t('featuresTitle')} <span className="text-gradient">{t('featuresTitleGradient')}</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Everything you need to sell smarter, deliver faster, and grow your agricultural business securely.
+            {t('featuresDesc')}
           </p>
         </div>
 

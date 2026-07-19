@@ -19,6 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { Language, languageNames } from '@/lib/translations';
 
 interface Message {
   id: string;
@@ -27,7 +29,7 @@ interface Message {
   timestamp: Date;
 }
 
-const getTranslations = (role: 'farmer' | 'buyer') => ({
+const getAITranslations = (role: 'farmer' | 'buyer') => ({
   en: {
     title: role === 'farmer' ? 'KrishiSathi AI' : 'AgriSourcing AI',
     subtitle: 'Powered by Groq',
@@ -95,23 +97,17 @@ const getTranslations = (role: 'farmer' | 'buyer') => ({
 
 export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
   const { user } = useAuth();
-  const [language, setLanguage] = useState<'en' | 'hi' | 'mr'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('lang');
-      if (saved === 'hi' || saved === 'mr' || saved === 'en') {
-        return saved;
-      }
-    }
-    return 'en';
-  });
+  const { language, setLanguage } = useLanguage();
 
-  const translations = getTranslations(role);
+  const translations = getAITranslations(role);
   const t = translations[language];
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize welcome message based on language and fetch history
@@ -175,11 +171,6 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const handleLanguageChange = (lang: 'en' | 'hi' | 'mr') => {
-    setLanguage(lang);
-    localStorage.setItem('lang', lang);
-  };
-
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
 
@@ -224,14 +215,88 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
     }
   };
 
-  const handleVoice = async () => {
-    setIsListening(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setIsListening(false);
-    const query = language === 'en' ? "Will it rain this week?" : 
-                  language === 'hi' ? "क्या इस सप्ताह बारिश होगी?" : 
-                  "या आठवड्यात पाऊस पडेल का?";
-    handleSend(query);
+  const getSpeechLang = () => {
+    const map: Record<Language, string> = { en: 'en-US', hi: 'hi-IN', mr: 'mr-IN' };
+    return map[language];
+  };
+
+  const handleVoice = () => {
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        sender: 'ai',
+        text: language === 'en' ? 'Speech recognition is not supported in your browser. Please try Chrome or Edge.'
+              : language === 'hi' ? 'आपके ब्राउज़र में वाचन पहचान समर्थित नहीं है। कृपया Chrome या Edge आज़माएं।'
+              : 'तुमच्या ब्राउझरमध्ये बोलणे ओळखणे उपलब्ध नाही. कृपया Chrome किंवा Edge वापरा.',
+        timestamp: new Date()
+      }]);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = getSpeechLang();
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setTranscript('');
+    };
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
+        } else {
+          interimTranscript += result[0].transcript;
+        }
+      }
+      if (finalTranscript) {
+        setTranscript(finalTranscript);
+      } else {
+        setTranscript(interimTranscript);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      setTranscript(prev => {
+        if (prev.trim()) {
+          handleSend(prev.trim());
+        }
+        return '';
+      });
+    };
+
+    recognition.onerror = (event: any) => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      setTranscript('');
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          sender: 'ai',
+          text: language === 'en' ? 'Could not recognize speech. Please try again.'
+                : language === 'hi' ? 'वाणी पहचानी नहीं जा सकी। कृपया पुनः प्रयास करें।'
+                : 'बोलणे ओळखता आले नाही. कृपया पुन्हा प्रयत्न करा.',
+          timestamp: new Date()
+        }]);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
   };
 
   return (
@@ -245,14 +310,14 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
           <p className="text-muted-foreground">{t.subtitle}</p>
         </div>
         <div className="flex gap-2">
-          {['en', 'hi', 'mr'].map((lang) => (
+          {(['en', 'hi', 'mr'] as Language[]).map((lang) => (
             <Badge 
               key={lang}
               variant="outline" 
               className={`cursor-pointer transition-colors ${language === lang ? 'bg-primary text-white border-primary' : 'bg-background text-muted-foreground'}`}
-              onClick={() => handleLanguageChange(lang as 'en' | 'hi' | 'mr')}
+              onClick={() => setLanguage(lang)}
             >
-              {lang === 'en' ? 'English' : lang === 'hi' ? 'हिंदी' : 'मराठी'}
+              {languageNames[lang]}
             </Badge>
           ))}
         </div>
@@ -350,11 +415,11 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
               </Button>
               
               <Input 
-                value={input}
+                value={isListening ? transcript : input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend(input)}
-                placeholder={t.placeholder}
-                className="h-12 bg-background border-border/50 rounded-xl pr-12 focus-visible:ring-primary/50 text-base"
+                onKeyDown={(e) => e.key === 'Enter' && !isListening && handleSend(input)}
+                placeholder={isListening ? (language === 'en' ? 'Listening...' : language === 'hi' ? 'सुन रहा हूँ...' : 'ऐकत आहे...') : t.placeholder}
+                className={`h-12 bg-background border-border/50 rounded-xl pr-12 focus-visible:ring-primary/50 text-base ${isListening ? 'border-destructive/50 text-destructive' : ''}`}
                 disabled={isListening}
               />
               

@@ -4,15 +4,18 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Mail, Phone, MapPin, ShieldCheck, Landmark, CheckCircle2, 
-  Edit2, Save, X, Sparkles, Bell, Heart, Upload, FileText, AlertTriangle
+  Edit2, Save, X, Sparkles, Bell, Heart, Upload, FileText, AlertTriangle, Globe
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useLanguage } from '@/context/LanguageContext';
+import { Language, languageNames } from '@/lib/translations';
 
 export default function ProfilePage() {
+  const { language, setLanguage, t } = useLanguage();
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -264,7 +267,8 @@ export default function ProfilePage() {
             { id: 'kyc', title: 'Identity (KYC)', icon: ShieldCheck },
             { id: 'preferences', title: 'Preferences', icon: Heart },
             { id: 'bank', title: 'Bank Settings', icon: Landmark },
-            { id: 'notifications', title: 'Notifications', icon: Bell }
+            { id: 'notifications', title: 'Notifications', icon: Bell },
+            { id: 'language', title: t('langSettings'), icon: Globe }
           ].map(tab => (
             <button
               key={tab.id}
@@ -534,6 +538,51 @@ export default function ProfilePage() {
                           />
                         </div>
                       ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeTab === 'language' && (
+                  <motion.div
+                    key="language"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">{t('langSettingsDesc')}</p>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground font-medium">{t('langLabel')}</label>
+                        <div className="grid grid-cols-1 gap-2">
+                          {(['en', 'hi', 'mr'] as Language[]).map((lang) => (
+                            <button
+                              key={lang}
+                              onClick={() => setLanguage(lang)}
+                              className={`flex items-center gap-3 p-4 rounded-lg border transition-all ${
+                                language === lang
+                                  ? 'border-primary bg-primary/5 text-foreground shadow-sm'
+                                  : 'border-border/50 bg-secondary/10 text-muted-foreground hover:bg-secondary/20 hover:text-foreground'
+                              }`}
+                            >
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                language === lang ? 'bg-primary text-white' : 'bg-secondary text-muted-foreground'
+                              }`}>
+                                {lang.toUpperCase()}
+                              </div>
+                              <div className="text-left">
+                                <div className="text-sm font-semibold">{languageNames[lang]}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {lang === 'en' ? 'English' : lang === 'hi' ? 'Hindi' : 'Marathi'}
+                                </div>
+                              </div>
+                              {language === lang && (
+                                <CheckCircle2 className="w-5 h-5 text-primary ml-auto" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 )}
