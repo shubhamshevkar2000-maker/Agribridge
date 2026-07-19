@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { protect } from '../middlewares/auth.middleware';
 import { Loan } from '../models/Loan';
 import { User } from '../models/User';
+import { createNotification } from '../services/notification.service';
 
 const router = Router();
 
@@ -88,6 +89,16 @@ router.put('/:id', protect, async (req: any, res) => {
     }
 
     await loan.save();
+    
+    // Notification for loan update
+    if (status) {
+      try {
+        const title = `Loan ${status.replace('_', ' ').toUpperCase()}`;
+        const message = `Your loan application for ₹${loan.amountRequested} is now ${status.replace('_', ' ')}`;
+        await createNotification({ userId: loan.farmerId, type: 'loan', title, message });
+      } catch (e) { console.error('Notification error', e); }
+    }
+
     res.json({ success: true, data: loan });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

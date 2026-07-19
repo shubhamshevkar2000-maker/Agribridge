@@ -8,6 +8,7 @@ const Transaction_1 = require("../models/Transaction");
 const CreditLedger_1 = require("../models/CreditLedger");
 const User_1 = require("../models/User");
 const redis_1 = require("../config/redis");
+const notification_service_1 = require("../services/notification.service");
 const router = (0, express_1.Router)();
 // Create an order
 router.post('/', auth_middleware_1.protect, async (req, res) => {
@@ -45,8 +46,19 @@ router.post('/', auth_middleware_1.protect, async (req, res) => {
             orderId: order._id,
             pickupLocation,
             dropLocation,
-            status: 'unassigned'
+            status: 'pending'
         });
+        try {
+            await (0, notification_service_1.createNotification)({
+                userId: crop.farmerId,
+                type: 'order',
+                title: 'New Order Received!',
+                message: `You have received a new order for ${quantity} of ${crop.name}.`
+            });
+        }
+        catch (e) {
+            console.error(e);
+        }
         res.status(201).json({ success: true, data: order });
     }
     catch (error) {

@@ -5,6 +5,7 @@ const zod_1 = require("zod");
 const auth_middleware_1 = require("../middlewares/auth.middleware");
 const Loan_1 = require("../models/Loan");
 const User_1 = require("../models/User");
+const notification_service_1 = require("../services/notification.service");
 const router = (0, express_1.Router)();
 const applyLoanSchema = zod_1.z.object({
     bankId: zod_1.z.string().optional(),
@@ -79,6 +80,17 @@ router.put('/:id', auth_middleware_1.protect, async (req, res) => {
             loan.amountApproved = loan.amountRequested;
         }
         await loan.save();
+        // Notification for loan update
+        if (status) {
+            try {
+                const title = `Loan ${status.replace('_', ' ').toUpperCase()}`;
+                const message = `Your loan application for ₹${loan.amountRequested} is now ${status.replace('_', ' ')}`;
+                await (0, notification_service_1.createNotification)({ userId: loan.farmerId, type: 'loan', title, message });
+            }
+            catch (e) {
+                console.error('Notification error', e);
+            }
+        }
         res.json({ success: true, data: loan });
     }
     catch (error) {

@@ -15,7 +15,7 @@ export interface IDelivery extends Document {
     type: string;
     coordinates: number[];
   }[];
-  status: 'unassigned' | 'accepted' | 'picked_up' | 'in_transit' | 'delivered' | 'cancelled';
+  status: 'pending' | 'packed' | 'in_transit' | 'delivered' | 'cancelled';
   vehicleId?: Types.ObjectId;
   driverId?: Types.ObjectId; // Might reference a separate Driver model or just User if they are the driver
   estimatedFuelCost?: number;
@@ -45,8 +45,8 @@ const deliverySchema = new Schema<IDelivery>(
     ],
     status: {
       type: String,
-      enum: ['unassigned', 'accepted', 'picked_up', 'in_transit', 'delivered', 'cancelled'],
-      default: 'unassigned',
+      enum: ['pending', 'packed', 'in_transit', 'delivered', 'cancelled'],
+      default: 'pending',
     },
     vehicleId: { type: Schema.Types.ObjectId, ref: 'Vehicle' },
     driverId: { type: Schema.Types.ObjectId, ref: 'User' },

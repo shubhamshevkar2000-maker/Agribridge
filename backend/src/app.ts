@@ -45,6 +45,7 @@ import loanRoutes from './routes/loan.routes';
 import deliveryRoutes from './routes/delivery.routes';
 import orderRoutes from './routes/order.routes';
 import wishlistRoutes from './routes/wishlist.routes';
+import notificationRoutes from './routes/notification.routes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/payments', paymentRoutes);
@@ -59,6 +60,7 @@ app.use('/api/loans', loanRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Global error handling middleware to ensure JSON is always returned
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

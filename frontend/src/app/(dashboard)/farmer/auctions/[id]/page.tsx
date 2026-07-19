@@ -76,15 +76,18 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
 
     fetchAuction();
 
-    // Connect to WebSocket
-    const newSocket = io("");
+    const socketUrl = typeof window !== 'undefined' 
+      ? (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '') 
+      : '';
+      
+    const newSocket = io(socketUrl);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
       newSocket.emit('auction:join', auctionId);
     });
 
-    newSocket.on('auction:update', (data) => {
+    const handleUpdate = (data: any) => {
       if (data.auctionId === auctionId) {
         setHighestBid(data.highestBid);
         if (data.history) {
@@ -98,39 +101,48 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
           setBidFeed(formattedHistory);
         }
       }
-    });
+    };
 
-    newSocket.on('auction:error', (err) => {
+    const handleError = (err: any) => {
       alert(`Bid Error: ${err.message}`);
-    });
-    
-    newSocket.on('auction:completed', (data) => {
+    };
+
+    const handleCompleted = (data: any) => {
       if (data.auctionId === auctionId) {
         setStatus('ended');
         setHighestBid(data.amount);
         setTimeLeft(0);
       }
-    });
+    };
+
+    newSocket.on('auction:update', handleUpdate);
+    newSocket.on('auction:error', handleError);
+    newSocket.on('auction:completed', handleCompleted);
 
     return () => {
-      newSocket.close();
+      newSocket.off('auction:update', handleUpdate);
+      newSocket.off('auction:error', handleError);
+      newSocket.off('auction:completed', handleCompleted);
+      newSocket.disconnect();
     };
   }, [auctionId, currentUserId]);
 
   useEffect(() => {
-    if (status === 'live' && timeLeft > 0) {
+    if (status === 'live' && auction?.endTime) {
       const timer = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0; // The server will emit 'auction:completed' via a cron or similar, but we stop the UI timer here.
-          }
-          return prev - 1;
-        });
+        const end = new Date(auction.endTime).getTime();
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((end - now) / 1000));
+        
+        setTimeLeft(remaining);
+        
+        if (remaining <= 0) {
+          clearInterval(timer);
+        }
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [status, timeLeft]);
+  }, [status, auction?.endTime]);
 
   const placeBid = () => {
     const val = parseInt(bidAmount);

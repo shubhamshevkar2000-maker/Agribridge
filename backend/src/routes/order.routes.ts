@@ -6,6 +6,7 @@ import { Transaction } from '../models/Transaction';
 import { CreditLedger } from '../models/CreditLedger';
 import { User } from '../models/User';
 import { redisClient } from '../config/redis';
+import { createNotification } from '../services/notification.service';
 
 const router = Router();
 
@@ -51,8 +52,17 @@ router.post('/', protect, async (req: any, res) => {
       orderId: order._id,
       pickupLocation,
       dropLocation,
-      status: 'unassigned'
+      status: 'pending'
     });
+
+    try {
+      await createNotification({ 
+        userId: crop.farmerId, 
+        type: 'order', 
+        title: 'New Order Received!', 
+        message: `You have received a new order for ${quantity} of ${crop.name}.` 
+      });
+    } catch (e) { console.error(e); }
 
     res.status(201).json({ success: true, data: order });
   } catch (error: any) {

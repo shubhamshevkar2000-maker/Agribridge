@@ -15,7 +15,7 @@ interface Delivery {
   };
   pickupLocation: { coordinates: number[] };
   dropLocation: { coordinates: number[] };
-  status: 'unassigned' | 'accepted' | 'picked_up' | 'in_transit' | 'delivered' | 'cancelled';
+  status: 'pending' | 'packed' | 'in_transit' | 'delivered' | 'cancelled';
   logisticsPartnerId?: { name: string; phone: string };
   driverId?: { name: string; phone: string };
   createdAt: string;
@@ -49,11 +49,10 @@ export default function DeliveriesPage() {
 
   const getStatusStep = (status: string) => {
     switch(status) {
-      case 'unassigned': return 0;
-      case 'accepted': return 1;
-      case 'picked_up': return 2;
-      case 'in_transit': return 3;
-      case 'delivered': return 4;
+      case 'pending': return 0;
+      case 'packed': return 1;
+      case 'in_transit': return 2;
+      case 'delivered': return 3;
       default: return 0;
     }
   };
@@ -96,8 +95,7 @@ export default function DeliveriesPage() {
               const currentStep = getStatusStep(delivery.status);
               
               const steps = [
-                { id: 'accepted', label: 'Assigned to Partner', icon: CheckCircle },
-                { id: 'picked_up', label: 'Picked Up', icon: ArrowRight },
+                { id: 'packed', label: 'Packed & Ready', icon: CheckCircle },
                 { id: 'in_transit', label: 'In Transit', icon: Navigation },
                 { id: 'delivered', label: 'Delivered', icon: MapPin },
               ];
@@ -141,7 +139,7 @@ export default function DeliveriesPage() {
                         <div className="absolute top-12 left-0 right-0 h-1 bg-muted rounded-full">
                           <div 
                             className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-1000 ease-in-out"
-                            style={{ width: `${Math.max(0, (currentStep / 4) * 100)}%` }}
+                            style={{ width: `${Math.max(0, (currentStep / 3) * 100)}%` }}
                           />
                         </div>
                         

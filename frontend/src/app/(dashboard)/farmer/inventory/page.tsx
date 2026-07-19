@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { mutate } from 'swr';
 import { Plus, Edit2, Trash2, Loader2, Package, Globe, Globe2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -243,6 +244,7 @@ export default function InventoryPage() {
       setIsFormOpen(false);
       setEditingCropId(null);
       fetchCrops();
+      mutate('/api/dashboard/farmer');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -266,6 +268,7 @@ export default function InventoryPage() {
         alert(data.message || 'Failed to delete crop');
       } else {
         fetchCrops();
+        mutate('/api/dashboard/farmer');
       }
     } catch (err) {
       console.error('Delete failed', err);
@@ -291,6 +294,7 @@ export default function InventoryPage() {
       const data = await res.json();
       if (data.success) {
         fetchCrops();
+        mutate('/api/dashboard/farmer');
       } else {
         alert(data.message || `Failed to ${action} crop`);
       }

@@ -97,7 +97,7 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
       newSocket.emit('auction:join', auctionId);
     });
 
-    newSocket.on('auction:update', (data) => {
+    const handleUpdate = (data: any) => {
       if (data.auctionId === auctionId) {
         setHighestBid(data.highestBid);
         if (data.history) {
@@ -111,41 +111,50 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
           setBidFeed(formattedHistory);
         }
       }
-    });
+    };
 
-    newSocket.on('auction:error', (err) => {
+    const handleError = (err: any) => {
       alert(`Bid Error: ${err.message}`);
-    });
-    
-    newSocket.on('auction:completed', (data) => {
+    };
+
+    const handleCompleted = (data: any) => {
       if (data.auctionId === auctionId) {
         setStatus('ended');
         setHighestBid(data.amount);
         setTimeLeft(0);
-        fetchAuctionDetails(); // Refetch ended details to update winner name
+        fetchAuctionDetails();
       }
-    });
+    };
+
+    newSocket.on('auction:update', handleUpdate);
+    newSocket.on('auction:error', handleError);
+    newSocket.on('auction:completed', handleCompleted);
 
     return () => {
-      newSocket.close();
+      newSocket.off('auction:update', handleUpdate);
+      newSocket.off('auction:error', handleError);
+      newSocket.off('auction:completed', handleCompleted);
+      newSocket.disconnect();
     };
   }, [auctionId, currentUserId]);
 
-  // Timer Tick hook
+  // Timer Tick hook - recalculate from end time to avoid drift
   useEffect(() => {
-    if (status === 'live' && timeLeft > 0) {
+    if (status === 'live' && auction?.endTime) {
       const timer = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
+        const end = new Date(auction.endTime).getTime();
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((end - now) / 1000));
+        
+        setTimeLeft(remaining);
+        
+        if (remaining <= 0) {
+          clearInterval(timer);
+        }
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [status, timeLeft]);
+  }, [status, auction?.endTime]);
 
   const minIncrement = auction?.minIncrement || 100;
   const nextRequiredBid = highestBid > 0 ? (highestBid + minIncrement) : (auction?.startingBid || 0);

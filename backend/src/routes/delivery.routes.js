@@ -4,6 +4,7 @@ const express_1 = require("express");
 const auth_middleware_1 = require("../middlewares/auth.middleware");
 const Delivery_1 = require("../models/Delivery");
 const Order_1 = require("../models/Order");
+const notification_service_1 = require("../services/notification.service");
 const router = (0, express_1.Router)();
 // GET /api/deliveries
 router.get('/', auth_middleware_1.protect, async (req, res) => {
@@ -40,7 +41,7 @@ router.post('/', auth_middleware_1.protect, async (req, res) => {
             orderId,
             pickupLocation: pickupLocation || { type: 'Point', coordinates: [0, 0] },
             dropLocation: dropLocation || { type: 'Point', coordinates: [0, 0] },
-            status: 'unassigned'
+            status: 'pending'
         });
         res.status(201).json({ success: true, data: newDelivery });
     }
@@ -127,6 +128,27 @@ router.get('/pool', auth_middleware_1.protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+// POST /api/deliveries/accept
+router.post('/accept', auth_middleware_1.protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'logistics') {
+            return res.status(403).json({ success: false, message: 'Only logistics can accept deliveries' });
+        }
+        const { orderIds } = req.body;
+        if (!orderIds || !Array.isArray(orderIds)) {
+            return res.status(400).json({ success: false, message: 'orderIds array is required' });
+        }
+        // Assign all matching pending deliveries to this logistics user
+        const result = await Delivery_1.Delivery.updateMany({ orderId: { $in: orderIds }, status: 'pending' }, {
+            status: 'packed',
+            logisticsPartnerId: req.user.id
+        });
+        res.json({ success: true, message: `Accepted ${result.modifiedCount} deliveries` });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 // GET /api/deliveries/:id
 router.get('/:id', auth_middleware_1.protect, async (req, res) => {
     try {
@@ -179,7 +201,7 @@ router.put('/:id/status', auth_middleware_1.protect, async (req, res) => {
             return res.status(403).json({ success: false, message: 'Only logistics can update status' });
         }
         const { status } = req.body;
-        const validStatuses = ['pending', 'in_transit', 'delivered', 'cancelled'];
+        const validStatuses = ['pending', 'packed', 'in_transit', 'delivered', 'cancelled'];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ success: false, message: 'Invalid status' });
         }
@@ -190,6 +212,19 @@ router.put('/:id/status', auth_middleware_1.protect, async (req, res) => {
         // Also update order status if delivered
         if (status === 'delivered') {
             await Order_1.Order.findByIdAndUpdate(delivery.orderId, { deliveryStatus: 'delivered' });
+        }
+        // Send notification
+        try {
+            const order = await Order_1.Order.findById(delivery.orderId);
+            if (order) {
+                const title = `Delivery ${status.replace('_', ' ').toUpperCase()}`;
+                const message = `Your delivery for order ${order._id} is now ${status.replace('_', ' ')}`;
+                await (0, notification_service_1.createNotification)({ userId: order.farmerId, type: 'delivery', title, message });
+                await (0, notification_service_1.createNotification)({ userId: order.buyerId, type: 'delivery', title, message });
+            }
+        }
+        catch (e) {
+            console.error('Notification error', e);
         }
         res.json({ success: true, data: delivery });
     }

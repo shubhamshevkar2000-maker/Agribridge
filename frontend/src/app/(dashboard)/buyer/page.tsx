@@ -179,8 +179,8 @@ export default function BuyerDashboard() {
                           <TableCell>{order.farmerId?.name || 'N/A'}</TableCell>
                           <TableCell className="font-semibold text-foreground">₹{order.totalAmount}</TableCell>
                           <TableCell className="pr-6">
-                            <Badge variant={order.status === 'Completed' ? 'default' : 'secondary'} className="rounded-lg">
-                              {order.status}
+                            <Badge variant={order.deliveryStatus === 'delivered' ? 'default' : 'secondary'} className="rounded-lg capitalize">
+                              {order.deliveryStatus?.replace('_', ' ') || 'pending'}
                             </Badge>
                           </TableCell>
                         </TableRow>

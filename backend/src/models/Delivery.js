@@ -54,8 +54,8 @@ const deliverySchema = new mongoose_1.Schema({
     ],
     status: {
         type: String,
-        enum: ['unassigned', 'accepted', 'picked_up', 'in_transit', 'delivered', 'cancelled'],
-        default: 'unassigned',
+        enum: ['pending', 'packed', 'in_transit', 'delivered', 'cancelled'],
+        default: 'pending',
     },
     vehicleId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Vehicle' },
     driverId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },

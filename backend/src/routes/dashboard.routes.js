@@ -47,11 +47,10 @@ router.get('/farmer', auth_middleware_1.protect, async (req, res) => {
         // 5. Fetch Delivery Stats
         const activeDeliveries = await Delivery_1.Delivery.find({
             orderId: { $in: orders.map(o => o._id) },
-            status: { $in: ['unassigned', 'accepted', 'picked_up', 'in_transit'] }
+            status: { $in: ['pending', 'packed', 'in_transit'] }
         }).populate({ path: 'orderId', populate: { path: 'cropId' } });
         const deliveriesCount = {
-            pending: activeDeliveries.filter(d => ['unassigned', 'accepted'].includes(d.status)).length,
-            pickedUp: activeDeliveries.filter(d => d.status === 'picked_up').length,
+            pending: activeDeliveries.filter(d => ['pending', 'packed'].includes(d.status)).length,
             inTransit: activeDeliveries.filter(d => d.status === 'in_transit').length,
             delivered: await Delivery_1.Delivery.countDocuments({
                 orderId: { $in: orders.map(o => o._id) },
@@ -125,7 +124,7 @@ router.get('/buyer', auth_middleware_1.protect, async (req, res) => {
         // 2. Active orders count
         const activeOrdersCount = await Order_1.Order.countDocuments({
             buyerId: userId,
-            status: { $in: ['Pending', 'Accepted', 'In Transit', 'Dispatched'] }
+            deliveryStatus: { $in: ['pending', 'confirmed', 'picked_up', 'in_transit'] }
         });
         // 3. Active bids count
         const activeAuctions = await Auction_1.Auction.find({ 'bids.bidderId': userId, status: 'live' });
@@ -183,14 +182,36 @@ router.get('/logistics', auth_middleware_1.protect, async (req, res) => {
 // Bank Dashboard Endpoint
 router.get('/bank', auth_middleware_1.protect, async (req, res) => {
     try {
-        const loans = await Loan_1.Loan.find({ bankId: req.user.id });
+        const loans = await Loan_1.Loan.find({ bankId: req.user.id }).populate('farmerId', 'name trustScore');
+        const formattedLoans = loans.map((l) => {
+            const farmer = l.farmerId || {};
+            const score = farmer.trustScore || 300;
+            let risk = 'Medium';
+            if (score >= 700)
+                risk = 'Low';
+            else if (score < 400)
+                risk = 'High';
+            return {
+                _id: l._id,
+                farmer: farmer.name || 'Unknown',
+                farmerId: farmer._id,
+                amount: l.amountRequested,
+                purpose: 'Agricultural', // Default since not in model
+                score: score,
+                risk: risk,
+                status: l.status,
+                createdAt: l.createdAt
+            };
+        });
+        const activeLoans = formattedLoans.filter(l => l.status === 'disbursed' || l.status === 'approved');
+        const pendingApps = formattedLoans.filter(l => l.status === 'pending');
         res.json({
             success: true,
             data: {
-                activeLoansCount: loans.filter(l => l.status === 'disbursed').length,
-                pendingApplicationsCount: loans.filter(l => l.status === 'pending').length,
-                totalDisbursed: loans.filter(l => l.status === 'disbursed').reduce((sum, l) => sum + (l.amountApproved || l.amountRequested || 0), 0),
-                recentApplications: loans.filter(l => l.status === 'pending').slice(0, 5)
+                activeLoansCount: activeLoans.length,
+                pendingApplicationsCount: pendingApps.length,
+                totalDisbursed: activeLoans.reduce((sum, l) => sum + l.amount, 0),
+                recentApplications: pendingApps.slice(0, 5)
             }
         });
     }

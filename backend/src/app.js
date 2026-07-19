@@ -44,6 +44,7 @@ const loan_routes_1 = __importDefault(require("./routes/loan.routes"));
 const delivery_routes_1 = __importDefault(require("./routes/delivery.routes"));
 const order_routes_1 = __importDefault(require("./routes/order.routes"));
 const wishlist_routes_1 = __importDefault(require("./routes/wishlist.routes"));
+const notification_routes_1 = __importDefault(require("./routes/notification.routes"));
 app.use('/api/auth', auth_routes_1.default);
 app.use('/api/payments', payment_routes_1.default);
 app.use('/api/ai', ai_routes_1.default);
@@ -57,6 +58,7 @@ app.use('/api/loans', loan_routes_1.default);
 app.use('/api/deliveries', delivery_routes_1.default);
 app.use('/api/orders', order_routes_1.default);
 app.use('/api/wishlist', wishlist_routes_1.default);
+app.use('/api/notifications', notification_routes_1.default);
 // Global error handling middleware to ensure JSON is always returned
 app.use((err, req, res, next) => {
     console.error('Unhandled Server Error:', err);

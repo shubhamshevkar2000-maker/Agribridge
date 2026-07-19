@@ -92,6 +92,28 @@ export default function LogisticsDashboard() {
     }
   };
 
+  const handleAcceptPool = async (orderIds: string[]) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/deliveries/accept`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ orderIds })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert(data.message || "Failed to accept deliveries");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const pools = dashboardData || [];
 
   return (
@@ -177,6 +199,12 @@ export default function LogisticsDashboard() {
                         </div>
                       </div>
                     ))}
+                    <Button 
+                      onClick={() => handleAcceptPool(pool.orders.map((o: any) => o.orderId))}
+                      className="mt-2 w-full bg-primary hover:bg-primary/90 text-white font-semibold"
+                    >
+                      Accept Pool Delivery
+                    </Button>
                   </div>
                 ))
               ) : (
