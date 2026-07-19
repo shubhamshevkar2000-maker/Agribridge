@@ -1,0 +1,448 @@
+{
+  "common": {
+    "appName": "AgriBridge",
+    "loading": "Loading...",
+    "redirecting": "Redirecting you to your dashboard...",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "logOut": "Log Out",
+    "logIn": "Log In",
+    "getStarted": "Get Started",
+    "continue": "Continue",
+    "viewAll": "View All",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "yes": "Yes",
+    "no": "No",
+    "active": "Active",
+    "completed": "Completed",
+    "pending": "Pending",
+    "liver": "LIVE",
+    "organic": "Organic"
+  },
+  "nav": {
+    "product": "Product",
+    "marketplace": "Marketplace",
+    "pricing": "Pricing",
+    "howItWorks": "How It Works",
+    "faq": "FAQ"
+  },
+  "hero": {
+    "trustedBy": "Trusted by 10,000+ Farmers",
+    "title": "Empowering Farmers Through",
+    "titleHighlight": "AI & Direct Access",
+    "subtitle": "A unified ecosystem bringing real-time auctions, smart logistics, AI crop advisory, and institutional credit directly to your farm.",
+    "joinAsFarmer": "Join as Farmer",
+    "exploreMarketplace": "Explore Marketplace",
+    "liveAuction": "Live Auction",
+    "currentBid": "Current Highest Bid",
+    "krishiSathiAI": "KrishiSathi AI",
+    "cropAdvisoryActive": "Crop Advisory Active",
+    "tomatoAdvice": "Tomato prices are trending 12% higher this week in your district. Good time to list!",
+    "trustScore": "Trust Score",
+    "excellentTier": "Excellent Tier"
+  },
+  "stats": {
+    "farmersOnboarded": "Farmers Onboarded",
+    "cropsSold": "Crops Sold (Tons)",
+    "valueTransacted": "Value Transacted",
+    "loansDisbursed": "Loans Disbursed"
+  },
+  "features": {
+    "title": "A Complete",
+    "titleHighlight": "Agri-Ecosystem",
+    "subtitle": "Everything you need to sell smarter, deliver faster, and grow your agricultural business securely.",
+    "liveAuctions": "Live Auctions",
+    "liveAuctionsDesc": "Bypass middlemen and sell your harvest through real-time bidding to verified buyers.",
+    "smartLogistics": "Smart Logistics",
+    "smartLogisticsDesc": "Optimize multi-farmer pickup routes and share truck costs transparently.",
+    "krishiSathiAI": "KrishiSathi AI",
+    "krishiSathiAIDesc": "Get instant crop advisory, disease detection, and price predictions in your local language.",
+    "agriCreditScoring": "AgriCredit Scoring",
+    "agriCreditScoringDesc": "Build a trustworthy credit profile based on your transaction history to access institutional loans.",
+    "directMarketplace": "Direct Marketplace",
+    "directMarketplaceDesc": "A nationwide platform connecting farmers and bulk buyers securely and transparently.",
+    "multilingualVoiceAI": "Multilingual Voice AI",
+    "multilingualVoiceAIDesc": "Interact with the platform using simple voice commands in English, Hindi, and Marathi."
+  },
+  "howItWorks": {
+    "badge": "Simple & Secure",
+    "title": "How AgriBridge Works",
+    "subtitle": "Our end-to-end system streamlines trade, ensures instant payment, and optimizes delivery.",
+    "step1": {
+      "title": "Onboard & Verify",
+      "desc": "Sign up as a Farmer, Buyer, Bank, or Logistics partner and quickly verify your KYC."
+    },
+    "step2": {
+      "title": "List or Bid",
+      "desc": "Farmers list harvests directly; buyers can buy immediately or bid in live auctions."
+    },
+    "step3": {
+      "title": "Escrow Payment",
+      "desc": "Buyers pay into a secure escrow system. Funds are locked safely."
+    },
+    "step4": {
+      "title": "Smart Delivery",
+      "desc": "Nearby pick-ups are routed dynamically, delivering crops and releasing funds."
+    }
+  },
+  "marketplace": {
+    "badge": "Marketplace Preview",
+    "title": "Explore Available Crops",
+    "browseMarketplace": "Browse Marketplace",
+    "farmer": "Farmer",
+    "perQtl": "/ qtl"
+  },
+  "liveAuctions": {
+    "badge": "Live Auctions",
+    "title": "Real-Time Competitive Bidding",
+    "desc": "Our Redis-backed lock system ensures bids are updated instantly. Farmers get maximum crop value; buyers get absolute transparency.",
+    "liveAuctionBadge": "LIVE AUCTION",
+    "endsIn": "Ends in",
+    "currentHighestBid": "Current Highest Bid",
+    "totalBids": "Total Bids Placed",
+    "bids": "Bids"
+  },
+  "aiAdvisor": {
+    "badge": "AI Advisory",
+    "title": "Chat with KrishiSathi AI",
+    "desc": "Get direct access to agronomy advice, pest remedies, and regional price alerts.",
+    "online": "Online",
+    "userQuestion": "What is the market price of basmati rice today in Haryana?",
+    "aiAnswer": "Basmati rice is currently trading at ₹3,200/qtl in Karnal mandi, up 3% from yesterday. Arrival volumes are expected to increase next week, making this an ideal window to list your crop."
+  },
+  "pricing": {
+    "badge": "Pricing Plans",
+    "title": "Transparent Commission",
+    "subtitle": "No hidden fees. We align our growth directly with your agricultural trade success.",
+    "forFarmers": "For Farmers",
+    "forFarmersDesc": "Access buyers directly with zero listing fees.",
+    "flatFee": "flat fee per sale",
+    "freeCropListings": "Free Crop Listings",
+    "freeLiveAuctions": "Free Live Auctions",
+    "multilingualAIAssistant": "Multilingual AI Assistant",
+    "trustProfileSetup": "Trust Profile Setup",
+    "getStartedAsFarmer": "Get Started as Farmer",
+    "forBuyers": "For Bulk Buyers",
+    "forBuyersDesc": "Bid on live auctions and source verified crops directly.",
+    "takeRate": "take-rate + shipping",
+    "realTimeBidding": "Real-time Bidding Room",
+    "escrowSecure": "Escrow Secure Checkout",
+    "qualityReports": "Quality Grade Inspection Reports",
+    "routeOptimized": "Route Optimized Freight Delivery",
+    "getStartedAsBuyer": "Get Started as Buyer"
+  },
+  "testimonials": {
+    "badge": "Success Stories",
+    "title": "Empowering Real People"
+  },
+  "faq": {
+    "badge": "Got Questions?",
+    "title": "Frequently Asked Questions"
+  },
+  "contact": {
+    "badge": "Get In Touch",
+    "title": "Partner with AgriBridge",
+    "desc": "Have questions about custom institutional solutions or API access? Connect with our dedicated support team.",
+    "namePlaceholder": "Your Name",
+    "emailPlaceholder": "Email Address",
+    "messagePlaceholder": "Your Message...",
+    "sendInquiry": "Send Inquiry"
+  },
+  "footer": {
+    "description": "Empowering Indian farmers through real-time marketplace bidding, route-optimized logistics, and friction-free banking.",
+    "platform": "Platform",
+    "features": "Features",
+    "marketplace": "Marketplace",
+    "pricing": "Pricing",
+    "resources": "Resources",
+    "faqs": "FAQs",
+    "howItWorks": "How It Works",
+    "newsletter": "Newsletter",
+    "newsletterDesc": "Subscribe to receive market price trends.",
+    "join": "Join",
+    "allRights": "All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Log in to your AgriBridge account",
+      "emailPlaceholder": "Email or Phone Number",
+      "passwordPlaceholder": "Password",
+      "forgotPassword": "Forgot password?",
+      "logInButton": "Log In",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "signup": {
+      "step1Title": "Create an account",
+      "step2Title": "Choose your role",
+      "step3Title": "Complete your profile",
+      "step4Title": "Set your location",
+      "stepOf": "Step {step} of {total}",
+      "fullName": "Full Name",
+      "email": "Email Address",
+      "phone": "Phone Number",
+      "password": "Password",
+      "continueToLocation": "Continue to Location",
+      "completeSignUp": "Complete Sign Up",
+      "hasAccount": "Already have an account?",
+      "logIn": "Log in",
+      "kycInfo": "Upload your KYC documents to verify your identity. You can also skip this and do it later from your dashboard.",
+      "clickToUpload": "Click to upload Aadhaar / PAN",
+      "fileTypes": "PDF, JPG or PNG (Max 5MB)",
+      "documentCaptured": "Document Captured",
+      "locationInfo": "Pin your location on the map. This helps us connect you with nearby logistics partners and farmers.",
+      "locationSelected": "Location selected"
+    },
+    "roles": {
+      "farmer": {
+        "title": "Farmer",
+        "desc": "Sell crops, run auctions, and access loans."
+      },
+      "buyer": {
+        "title": "Buyer",
+        "desc": "Bid on live auctions and buy fresh produce."
+      },
+      "logistics": {
+        "title": "Logistics Partner",
+        "desc": "Deliver produce and earn by route."
+      },
+      "bank": {
+        "title": "Bank / NBFC",
+        "desc": "Provide credit using AgriCredit scores."
+      }
+    }
+  },
+  "farmer": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "marketplace": "Marketplace",
+      "auctions": "Auctions",
+      "inventory": "Inventory",
+      "agriCredit": "AgriCredit",
+      "loans": "Loans",
+      "aiAssistant": "AI Assistant",
+      "deliveries": "Deliveries"
+    },
+    "account": "Farmer Account",
+    "kpi": {
+      "revenue": "Today's Revenue",
+      "activeAuctions": "Active Auctions",
+      "trustScore": "Trust Score",
+      "creditScore": "Credit Score",
+      "totalRevenue": "Total Revenue",
+      "fromLastMonth": "from last month",
+      "excellent": "Excellent",
+      "good": "Good",
+      "base": "Base",
+      "live": "Live"
+    },
+    "sections": {
+      "liveAuctions": "Live Auctions",
+      "weatherAdvisory": "Weather Advisory",
+      "krishiSathiAI": "KrishiSathi AI",
+      "monitorAuctions": "Monitor your ongoing crop auctions.",
+      "smartInsights": "Smart insights for your farm"
+    },
+    "auction": {
+      "noImage": "No Image",
+      "listedCrop": "Listed Crop",
+      "quantity": "Quantity:",
+      "organic": "Organic:",
+      "currentBid": "Current Highest Bid",
+      "viewLive": "View Live",
+      "listCrop": "List a Crop",
+      "noActiveAuctions": "No Active Auctions",
+      "noAuctionsDesc": "You haven't listed any crops for auction yet."
+    },
+    "weather": {
+      "fiveDay": "5-Day Forecast:",
+      "daysAvailable": "days of data available.",
+      "rainComing": "High chance of rain coming up.",
+      "clearSkies": "Clear skies expected.",
+      "locationNotSet": "Location not set.",
+      "unavailable": "Weather unavailable (API Key needed)"
+    },
+    "ai": {
+      "suggestPrice": "Suggest Optimal Price",
+      "analyzing": "Analyzing market data...",
+      "tomatoMessage": "Your tomato inventory is ready for sale. Market demand in Mumbai is currently high."
+    },
+    "profile": "Update Profile"
+  },
+  "buyer": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "browseFarmers": "Browse Farmers",
+      "marketplace": "Marketplace",
+      "auctions": "Auctions",
+      "favorites": "Favorites",
+      "orders": "Orders",
+      "invoices": "Invoices"
+    },
+    "account": "Buyer Account",
+    "kpi": {
+      "activeOrders": "Active Orders",
+      "totalSpent": "Total Spent",
+      "activeBids": "Active Bids",
+      "inTransit": "In Transit",
+      "currentYear": "Current Financial Year",
+      "liveAuctions": "Live Auctions"
+    },
+    "sections": {
+      "recentPurchases": "Recent Purchases",
+      "deliveryTracker": "Delivery Tracker",
+      "favoriteFarmers": "Favorite Farmers",
+      "latestOrders": "Your latest orders (Using mock data until Phase 6)",
+      "loadingOrders": "Loading orders...",
+      "noPurchases": "No recent purchases found.",
+      "noFavorites": "No favorite farmers yet.",
+      "browseFarmers": "Browse More Farmers"
+    },
+    "table": {
+      "orderId": "Order ID",
+      "date": "Date",
+      "crop": "Crop",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "delivery": {
+      "arriving": "Arriving Today, 4:00 PM",
+      "inTransit": "In Transit",
+      "currentLocation": "Current Location",
+      "kmAway": "30km away from destination"
+    }
+  },
+  "logistics": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "activeRoutes": "Active Routes",
+      "fleetStatus": "Fleet Status",
+      "history": "History"
+    },
+    "account": "Logistics Partner",
+    "kpi": {
+      "activeDeliveries": "Active Deliveries",
+      "completed": "Completed",
+      "totalEarnings": "Total Earnings",
+      "fleetSize": "Fleet Size"
+    },
+    "sections": {
+      "suggestedPools": "Suggested Pools",
+      "noActiveRoutes": "No Active Routes",
+      "liveTracking": "Live Tracking",
+      "mapUnavailable": "Map Unavailable",
+      "costSharing": "Cost-sharing pooled routes",
+      "noPendingDeliveries": "No pending deliveries to pool",
+      "mapPlaceholder": "Your map will appear here once you have an active route assigned to your fleet.",
+      "noActiveDeliveries": "No Active Deliveries",
+      "noUpcomingStops": "You have no upcoming stops in your itinerary.",
+      "loadingPools": "Loading pools..."
+    },
+    "pool": {
+      "pool": "Pool #",
+      "totalVol": "Total Vol:",
+      "units": "units",
+      "estCost": "Est. Cost:",
+      "farmer": "Farmer:",
+      "qty": "Qty:",
+      "splitCost": "Split Cost:",
+      "pickup": "PICKUP",
+      "accept": "Accept",
+      "accepting": "Accepting...",
+      "openInMaps": "Open in Maps",
+      "navigating": "Navigating to next stop"
+    }
+  },
+  "bank": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "loanApplications": "Loan Applications",
+      "farmerProfiles": "Farmer Profiles",
+      "riskAnalytics": "Risk Analytics"
+    },
+    "account": "Institutional",
+    "kpi": {
+      "totalDisbursed": "Total Disbursed",
+      "activeLoans": "Active Loans",
+      "avgTrustScore": "Avg. Trust Score",
+      "recoveryRate": "Recovery Rate"
+    },
+    "sections": {
+      "pendingApplications": "Pending Loan Applications",
+      "reviewApplication": "Review Loan Application",
+      "reviewDesc": "Review applications powered by AgriBridge Trust Scores",
+      "detailedRisk": "Detailed risk analysis provided by AgriBridge Ledger.",
+      "loadingApps": "Loading applications...",
+      "noPending": "No pending loan applications."
+    },
+    "table": {
+      "appId": "App ID",
+      "applicant": "Applicant",
+      "amountPurpose": "Amount & Purpose",
+      "trustScore": "Trust Score",
+      "status": "Status",
+      "action": "Action"
+    },
+    "application": {
+      "unknown": "Unknown",
+      "agricultural": "Agricultural",
+      "risk": "Risk",
+      "requestedAmount": "Requested Amount",
+      "agriCreditScore": "AgriCredit Score",
+      "applicant": "Applicant",
+      "verified": "Verified",
+      "purpose": "Purpose",
+      "transactionVolume": "Platform Transaction Volume",
+      "ytd": "₹24,50,000 YTD",
+      "defaultRate": "Past Default Rate",
+      "review": "Review",
+      "reject": "Reject",
+      "approve": "Approve Loan"
+    }
+  },
+  "admin": {
+    "nav": {
+      "systemOverview": "System Overview",
+      "userManagement": "User Management",
+      "disputeResolution": "Dispute Resolution",
+      "platformSettings": "Platform Settings"
+    },
+    "console": "Admin Console",
+    "superAdmin": "Super Admin",
+    "level5Access": "Level 5 Access",
+    "kpi": {
+      "totalGMV": "Total GMV",
+      "platformRevenue": "Platform Revenue",
+      "activeUsers": "Active Users",
+      "activeDisputes": "Active Disputes"
+    },
+    "sections": {
+      "gmvRevenue": "Platform GMV & Revenue",
+      "disputeQueue": "Dispute Queue",
+      "monthlyVolume": "Monthly aggregated transaction volume",
+      "escalatedOrders": "Escalated orders requiring admin mediation",
+      "resolve": "Resolve"
+    },
+    "dispute": {
+      "qualityMismatch": "Quality Mismatch",
+      "delayedLogistics": "Delayed Logistics",
+      "paymentFailed": "Payment Failed",
+      "high": "HIGH",
+      "medium": "MEDIUM"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "allCaughtUp": "You're all caught up!"
+  }
+}

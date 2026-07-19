@@ -1,0 +1,11 @@
+* [33m445121d[m[33m ([m[1;31morigin/nidhi/logistics-enhancement[m[33m)[m Complete buyer and farmer module enhancements
+* [33mc892fcb[m feat: complete milestone 2 farmer dashboard
+* [33m5a7b842[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Remove .env from repository
+*   [33m11787f8[m Resolve merge conflicts
+[32m|[m[33m\[m  
+[32m|[m * [33mee4391c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mlogistics-module[m[33m, [m[1;31morigin/logistics-module[m[33m, [m[1;32mmain[m[33m)[m Add logistics dashboard frontend and related pages
+* [33m|[m [33m7c422a6[m Fix marketplace layout, remove hardcoded data, improve AI integration
+[33m|[m[33m/[m  
+* [33m9b35fba[m BETTER FUNCTIONABILTY
+* [33m21e3f5a[m Added dashboard features and integrated database
+* [33mb914d5c[m Initial project

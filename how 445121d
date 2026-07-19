@@ -1,0 +1,130 @@
+[33mcommit 445121d8aef63dc46b685dc6d31f8f816e00c9ea[m[33m ([m[1;31morigin/nidhi/logistics-enhancement[m[33m)[m
+Author: Jiya Thakur <Jiyathakur876@gmail.com>
+Date:   Sat Jul 18 21:56:39 2026 +0530
+
+    Complete buyer and farmer module enhancements
+
+[1mdiff --git a/backend/package.json b/backend/package.json[m
+[1mindex a7df762..247c02d 100644[m
+[1m--- a/backend/package.json[m
+[1m+++ b/backend/package.json[m
+[36m@@ -6,7 +6,8 @@[m
+     "scripts": {[m
+         "build": "tsc",[m
+         "dev": "nodemon src/index.ts",[m
+[31m-        "start": "node dist/index.js"[m
+[32m+[m[32m        "start": "node dist/index.js",[m
+[32m+[m[32m        "seed": "ts-node scripts/seed-dashboard.ts"[m
+     },[m
+     "keywords": [],[m
+     "author": "",[m
+[1mdiff --git a/backend/scripts/seed-dashboard.js b/backend/scripts/seed-dashboard.js[m
+[1mnew file mode 100644[m
+[1mindex 0000000..2341954[m
+[1m--- /dev/null[m
+[1m+++ b/backend/scripts/seed-dashboard.js[m
+[36m@@ -0,0 +1,212 @@[m
+[32m+[m[32m"use strict";[m
+[32m+[m[32mvar __importDefault = (this && this.__importDefault) || function (mod) {[m
+[32m+[m[32m    return (mod && mod.__esModule) ? mod : { "default": mod };[m
+[32m+[m[32m};[m
+[32m+[m[32mObject.defineProperty(exports, "__esModule", { value: true });[m
+[32m+[m[32mconst mongoose_1 = __importDefault(require("mongoose"));[m
+[32m+[m[32mconst dotenv_1 = __importDefault(require("dotenv"));[m
+[32m+[m[32mconst bcrypt_1 = __importDefault(require("bcrypt"));[m
+[32m+[m[32mconst dns_1 = __importDefault(require("dns"));[m
+[32m+[m[32mdns_1.default.setServers(['8.8.8.8', '8.8.4.4']);[m
+[32m+[m[32mconst User_1 = require("../src/models/User");[m
+[32m+[m[32mconst Crop_1 = require("../src/models/Crop");[m
+[32m+[m[32mconst Auction_1 = require("../src/models/Auction");[m
+[32m+[m[32mconst Order_1 = require("../src/models/Order");[m
+[32m+[m[32mconst Delivery_1 = require("../src/models/Delivery");[m
+[32m+[m[32mconst Notification_1 = require("../src/models/Notification");[m
+[32m+[m[32mconst Transaction_1 = require("../src/models/Transaction");[m
+[32m+[m[32mconst Loan_1 = require("../src/models/Loan");[m
+[32m+[m[32mdotenv_1.default.config();[m
+[32m+[m[32mconst MONGO_URI = process.env.MONGO_URI;[m
+[32m+[m[32mif (!MONGO_URI) {[m
+[32m+[m[32m    console.error('MONGO_URI is required in .env');[m
+[32m+[m[32m    process.exit(1);[m
+[32m+[m[32m}[m
+[32m+[m[32mconst seedDashboard = async () => {[m
+[32m+[m[32m    try {[m
+[32m+[m[32m        await mongoose_1.default.connect(MONGO_URI);[m
+[32m+[m[32m        console.log('Connected to MongoDB');[m
+[32m+[m[32m        // Read demo credentials from env or use fallback defaults[m
+[32m+[m[32m        const farmerEmail = process.env.DEMO_FARMER_EMAIL || 'demo.farmer@agribridge.com';[m
+[32m+[m[32m        const farmerPassword = process.env.DEMO_FARMER_PASSWORD || 'Demo@123';[m
+[32m+[m[32m        const buyerEmail = process.env.DEMO_BUYER_EMAIL || 'demo.buyer@agribridge.com';[m
+[32m+[m[32m        const buyerPassword = process.env.DEMO_BUYER_PASSWORD || 'Demo@123';[m
+[32m+[m[32m        // Clean up specific seed users based on email[m
+[32m+[m[32m        console.log('Cleaning up existing seed data...');[m
+[32m+[m[32m        const seedEmails = [[m
+[32m+[m[32m            farmerEmail,[m
+[32m+[m[32m            buyerEmail,[m
+[32m+[m[32m            'logistics_seed@example.com',[m
+[32m+[m[32m            'farmer_seed@example.com',[m
+[32m+[m[32m            'buyer_seed@example.com'[m
+[32m+[m[32m        ];[m
+[32m+[m[32m        const existingUsers = await User_1.User.find({ email: { $in: seedEmails } });[m
+[32m+[m[32m        const userIds = existingUsers.map(u => u._id);[m
+[32m+[m[32m        await Crop_1.Crop.deleteMany({ farmerId: { $in: userIds } });[m
+[32m+[m[32m        await Auction_1.Auction.deleteMany({ farmerId: { $in: userIds } });[m
+[32m+[m[32m        await Order_1.Order.deleteMany({ farmerId: { $in: userIds } });[m
+[32m+[m[32m        await Delivery_1.Delivery.deleteMany({ orderId: { $in: (await Order_1.Order.find({ farmerId: { $in: userIds } })).map(o => o._id) } });[m
+[32m+[m[32m        await Notification_1.Notification.deleteMany({ userId: { $in: userIds } });[m
+[32m+[m[32m        await Transaction_1.Transaction.deleteMany({ $or: [{ payerId: { $in: userIds } }, { payeeId: { $in: userIds } }] });[m
+[32m+[m[32m        await Loan_1.Loan.deleteMany({ farmerId: { $in: userIds } });[m
+[32m+[m[32m        await User_1.User.deleteMany({ email: { $in: seedEmails } });[m
+[32m+[m[32m        console.log('Inserting fresh seed data...');[m
+[32m+[m[32m        // 1. Create Users[m
+[32m+[m[32m        const farmerPasswordHash = await bcrypt_1.default.hash(farmerPassword, 10);[m
+[32m+[m[32m        const buyerPasswordHash = await bcrypt_1.default.hash(buyerPassword, 10);[m
+[32m+[m[32m        const logisticsPasswordHash = await bcrypt_1.default.hash('password123', 10);[m
+[32m+[m[32m        const farmer = await User_1.User.create({[m
+[32m+[m[32m            name: 'Ramesh Kumar',[m
+[32m+[m[32m            email: farmerEmail,[m
+[32m+[m[32m            phone: '1234500001',[m
+[32m+[m[32m            passwordHash: farmerPasswordHash,[m
+[32m+[m[32m            role: 'farmer',[m
+[32m+[m[32m            location: {[m
+[32m+[m[32m                type: 'Point',[m
+[32m+[m[32m                coordinates: [73.8567, 18.5204],[m
+[32m+[m[32m                address: 'Farm Plot 42',[m
+[32m+[m[32m                city: 'Pune',[m
+[32m+[m[32m                state: 'Maharashtra',[m
+[32m+[m[32m                zipCode: '411001'[m
+[32m+[m[32m            },[m
+[32m+[m[32m            trustScore: 850,[m
+[32m+[m[32m            creditScore: 780,[m
+[32m+[m[32m            walletBalance: 125000,[m
+[32m+[m[32m            isDemoAccount: true[m
+[32m+[m[32m        });[m
+[32m+[m[32m        const buyer = await User_1.User.create({[m
+[32m+[m[32m            name: 'FreshMart Ltd',[m
+[32m+[m[32m            email: buyerEmail,[m
+[32m+[m[32m            phone: '1234500002',[m
+[32m+[m[32m            passwordHash: buyerPasswordHash,[m
+[32m+[m[32m            role: 'buyer',[m
+[32m+[m[32m            isDemoAccount: true[m
+[32m+[m[32m        });[m
+[32m+[m[32m        const logistics = await User_1.User.create({[m
+[32m+[m[32m            name: 'AgriTrans',[m
+[32m+[m[32m            email: 'logistics_seed@example.com',[m
+[32m+[m[32m            phone: '1234500003',[m
+[32m+[m[32m            passwordHash: logisticsPasswordHash,[m
+[32m+[m[32m            role: 'logistics',[m
+[32m+[m[32m            isDemoAccount: true[m
+[32m+[m[32m        });[m
+[32m+[m[32m        // 2. Create Crops (20 crops: 15 available, 5 low stock)[m
+[32m+[m[32m        const crops = [];[m
+[32m+[m[32m        const cropNames = ['Tomato', 'Onion', 'Potato', 'Wheat', 'Rice', 'Soybean', 'Cotton', 'Sugarcane', 'Maize', 'Bajra'];[m
+[32m+[m[32m        const cropImages = {[m
+[32m+[m[32m            'Tomato': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=800&q=80',[m
+[32m+[m[32m            'Onion': 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?auto=format&fit=crop&w=800&q=80',[m
+[32m+[m[32m            'Potato': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=800&q=80',[m
+[32m+[m[32m            'Wheat': 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=800&q=80',[m
+[32m+[m[32m            'Rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=800&q=80',[m
+[32m+[m[32m            'Soybean': 'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=800&q=80',[m
+[32m+[m[32m            'Cotton': 'https://images.unsplash.com/photo-1598514982205-f36b96d1e8d4?auto=format&fit=crop&w=800&q=80',[m
+[32m+[m[32m            'Sugarcane': 'https://images.unsplash.com/photo-15931136
