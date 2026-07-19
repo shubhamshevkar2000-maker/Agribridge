@@ -184,15 +184,7 @@ router.post('/:id/bid', protect, async (req: any, res) => {
 // GET /api/auctions - Get live auctions
 router.get('/', protect, async (req: any, res) => {
   try {
-    const requester = await User.findById(req.user.id);
-    const isDemo = requester ? requester.isDemoAccount === true : false;
-
     const farmerQuery: any = { role: 'farmer' };
-    if (isDemo) {
-      farmerQuery.isDemoAccount = true;
-    } else {
-      farmerQuery.isDemoAccount = { $ne: true };
-    }
     const validFarmers = await User.find(farmerQuery).select('_id');
     const validFarmerIds = validFarmers.map((f: any) => f._id);
 
@@ -242,12 +234,6 @@ router.get('/:id', protect, async (req: any, res) => {
     const farmer = auction.farmerId as any;
     if (!farmer || farmer.role !== 'farmer') {
       return res.status(404).json({ success: false, message: 'Farmer inactive or not found' });
-    }
-
-    const requester = await User.findById(req.user.id);
-    const isDemo = requester ? requester.isDemoAccount === true : false;
-    if (isDemo !== (farmer.isDemoAccount === true)) {
-      return res.status(404).json({ success: false, message: 'Auction is not available' });
     }
 
     const isOwner = farmer._id.toString() === req.user.id;

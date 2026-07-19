@@ -8,6 +8,7 @@ export interface ILoan extends Document {
   tenure: number; // in months
   interestRate?: number;
   status: 'pending' | 'under_review' | 'approved' | 'disbursed' | 'rejected' | 'repaid' | 'defaulted';
+  isDemoAccount?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +26,7 @@ const loanSchema = new Schema<ILoan>(
       enum: ['pending', 'under_review', 'approved', 'disbursed', 'rejected', 'repaid', 'defaulted'],
       default: 'pending',
     },
+    isDemoAccount: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

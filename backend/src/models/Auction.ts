@@ -20,6 +20,7 @@ export interface IAuction extends Document {
   quantity: number;
   notes?: string;
   bids: IAuctionBid[];
+  isDemoAccount?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +50,7 @@ const auctionSchema = new Schema<IAuction>(
         timestamp: { type: Date, default: Date.now },
       },
     ],
+    isDemoAccount: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

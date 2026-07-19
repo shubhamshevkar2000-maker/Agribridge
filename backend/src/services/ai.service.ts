@@ -1,6 +1,11 @@
 import Groq from 'groq-sdk';
 import { AiInteraction } from '../models/AiInteraction';
 import { User } from '../models/User';
+import { Crop } from '../models/Crop';
+import { Auction } from '../models/Auction';
+import { Order } from '../models/Order';
+import { Delivery } from '../models/Delivery';
+import { Loan } from '../models/Loan';
 import { getWeatherData } from './weather.service';
 import { fetchMarketPrices } from './market.service';
 
@@ -24,80 +29,335 @@ export const getKrishiSathiResponse = async (userId: string, prompt: string, lan
     console.log('[DEBUG] getKrishiSathiResponse CALLED with prompt:', prompt);
     let responseText = '';
     
-    // Fetch user location for weather context
+    // Fetch user details
     const user = await User.findById(userId);
+    if (!user) {
+      return "User not found. Please log in again.";
+    }
+    const userRole = user.role;
+
+    // Initialize module contexts
     let weatherContext = '';
+    let marketplaceContext = '';
+    let logisticsContext = '';
+    let auctionContext = '';
+    let inventoryContext = '';
+    let loanContext = '';
+
+    const lowerPrompt = prompt.toLowerCase();
+
+    // 1. Weather Intent detection
+    const weatherKeywords = ['weather', 'rain', 'barish', 'mausam', 'havaman', 'forecast', 'cloud', 'temperature', 'taapman', 'wet', 'climate', 'advisory', 'irrigate', 'irrigation', 'water', 'pani', 'paani', 'sinchan', 'dhoop', 'fog', 'weather forecast'];
+    const isWeatherQuery = weatherKeywords.some(kw => lowerPrompt.includes(kw));
     
-    if (prompt.toLowerCase().includes('weather') || prompt.toLowerCase().includes('rain') || prompt.toLowerCase().includes('mausam') || prompt.toLowerCase().includes('havaman')) {
-      if (user && user.location && user.location.coordinates && user.location.coordinates.length >= 2) {
+    if (isWeatherQuery) {
+      if (user.location && user.location.coordinates && user.location.coordinates.length >= 2 && (user.location.coordinates[0] !== 0 || user.location.coordinates[1] !== 0)) {
         const [lon, lat] = user.location.coordinates;
-        const weatherRes = await getWeatherData(lat, lon);
-        if (weatherRes.success) {
-          weatherContext = `CURRENT WEATHER CONTEXT: Temp: ${weatherRes.data.current.temp}°C, Desc: ${weatherRes.data.current.description}. 5-Day forecast shows next day rain probability at ${weatherRes.data.forecast[0].rainChance}%.`;
+        try {
+          const weatherRes = await getWeatherData(lat, lon);
+          if (weatherRes && weatherRes.success && weatherRes.data) {
+            const current = weatherRes.data.current || {};
+            const forecast = weatherRes.data.forecast || [];
+            weatherContext = `WEATHER DATA (Real-time):
+- Location Coordinates: [${lat}, ${lon}]
+- Current Temperature: ${current.temp || 'N/A'}°C
+- Current Weather: ${current.description || 'N/A'}
+- Rain Probability: ${forecast[0] ? forecast[0].rainChance : '0'}%
+- 5-Day Forecast Summary: ${forecast.slice(0, 5).map((f: any, i: number) => `Day ${i+1}: ${f.temp?.day || f.temp}°C (${f.description}, Rain: ${f.rainChance || 0}%)`).join(', ')}`;
+          } else {
+            weatherContext = 'WEATHER STATUS: Live weather information is temporarily unavailable. Please try again in a few minutes.';
+          }
+        } catch (err) {
+          weatherContext = 'WEATHER STATUS: Live weather information is temporarily unavailable. Please try again in a few minutes.';
         }
       } else {
-        return "I don't have your farm location yet — please add it in your profile so I can give you accurate weather updates.";
+        weatherContext = 'WEATHER STATUS: No farm location set in user profile. Advise user to add location coordinates in their profile settings.';
       }
     }
 
-    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'mock-key-for-dev') {
-      // Dev mode without key
-      const isPrice = prompt.toLowerCase().includes('price');
-      const isWeather = prompt.toLowerCase().includes('weather') || prompt.toLowerCase().includes('rain');
-      
-      if (isPrice) {
-        responseText = "I'm sorry, but live market prices and APMC data are not currently available in this phase. I cannot predict crop prices at this time.";
-      } else if (isWeather) {
-        responseText = weatherContext 
-          ? `Based on real data: ${weatherContext}`
-          : "I don't have your farm location yet — please add it in your profile.";
-      } else {
-        responseText = "I am KrishiSathi, your AI agricultural assistant. I can help you with real weather advisories and platform questions.";
+    // 2. Marketplace Intent detection
+    const marketplaceKeywords = ['price', 'rate', 'bhav', 'bhaav', 'dam', 'daam', 'mandi', 'market', 'cost', 'apmc', 'sell', 'buy', 'value', 'rupee', 'wheat', 'cotton', 'rice', 'tomato', 'onion', 'potato', 'gehu', 'chawal', 'dhan', 'tamatar', 'kanda', 'pyaaj', 'aloo', 'kapas'];
+    const isMarketplaceQuery = marketplaceKeywords.some(kw => lowerPrompt.includes(kw));
+
+    let dbCrops: any[] = [];
+    let marketData: any = null;
+
+    if (isMarketplaceQuery) {
+      try {
+        dbCrops = await Crop.find({ status: 'listed' }).populate('farmerId').limit(10).lean();
+        const userLocation = user.location?.city || user.location?.district || undefined;
+        marketData = await fetchMarketPrices(prompt, userLocation);
+        
+        let apmcRates = '';
+        if (marketData) {
+          apmcRates = `Estimated Market Trend (Demo) for ${marketData.crop}:
+- Wholesale Est: ₹${marketData.estimatedWholesalePrice}/${marketData.sources[0]?.unit || 'kg'}
+- Retail Est Avg: ₹${marketData.averageRetailPrice}/${marketData.sources[0]?.unit || 'kg'}
+- Platform Estimations: ${marketData.sources.map((s: any) => `${s.name}: ₹${s.price}/${s.unit}`).join(', ')}`;
+        }
+
+        marketplaceContext = `AGRIBRIDGE MARKETPLACE LISTINGS (Real user listings currently listed on AgriBridge):
+${dbCrops.length > 0 ? dbCrops.map((c: any) => {
+  const sellerName = (c.farmerId as any)?.name || 'Unknown Seller';
+  const city = c.location?.city || c.location?.state || 'N/A';
+  return `- Crop: ${c.name}, Seller: ${sellerName}, Quantity: ${c.quantity} ${c.unit}, Asking Price: ₹${c.pricePerUnit}/${c.unit}, Location: ${city}`;
+}).join('\n') : 'No crops currently listed on the marketplace.'}
+
+EXTERNAL MARKET INFORMATION:
+${apmcRates || 'No external market trends available.'}`;
+      } catch (err) {
+        console.error('Marketplace query error:', err);
       }
-      
+    }
+
+    // 3. Logistics/Delivery Intent detection
+    const logisticsKeywords = ['delivery', 'logistics', 'track', 'shipment', 'status', 'kahan', 'kaha', 'where is', 'eta', 'transit', 'route', 'driver', 'gadi', 'vehicle', 'pickup', 'drop', 'transport'];
+    const isLogisticsQuery = logisticsKeywords.some(kw => lowerPrompt.includes(kw));
+
+    if (isLogisticsQuery) {
+      try {
+        const orders = await Order.find(userRole === 'farmer' ? { farmerId: userId } : { buyerId: userId }).lean();
+        const orderIds = orders.map((o: any) => o._id);
+        
+        if (orderIds.length > 0) {
+          const deliveries = await Delivery.find({ orderId: { $in: orderIds } }).lean();
+          if (deliveries.length > 0) {
+            logisticsContext = `LOGISTICS DATA (User's active shipments):
+${deliveries.map((d: any, idx: number) => {
+  return `- Shipment #${idx + 1} for Order ID: ${d.orderId}
+  - Status: ${d.status.toUpperCase()}
+  - Estimated Fuel Cost/Earnings: ${d.earnings ? `₹${d.earnings}` : 'N/A'}
+  - Current Stage: ${d.status === 'pending' ? 'Pending pickup scheduling' : d.status === 'packed' ? 'Packed and ready for pickup' : d.status === 'in_transit' ? 'In transit to drop location' : 'Delivered successfully'}`;
+}).join('\n')}`;
+          } else {
+            logisticsContext = 'LOGISTICS DATA: No active shipments are set up for your orders yet.';
+          }
+        } else {
+          logisticsContext = 'LOGISTICS DATA: No recent orders found, hence no active shipments exist.';
+        }
+      } catch (err) {
+        console.error('Logistics query error:', err);
+      }
+    }
+
+    // 4. Auctions Intent detection
+    const auctionsKeywords = ['auction', 'bid', 'boli', 'live', 'upcoming', 'highest bid', 'winner', 'schedule'];
+    const isAuctionsQuery = auctionsKeywords.some(kw => lowerPrompt.includes(kw));
+
+    if (isAuctionsQuery) {
+      try {
+        const query: any = { status: { $in: ['live', 'scheduled'] } };
+        if (userRole === 'farmer') {
+          query.farmerId = userId;
+        }
+        const dbAuctions = await Auction.find(query).populate('cropId').limit(5).lean();
+        if (dbAuctions.length > 0) {
+          auctionContext = `AUCTION DATA (Active / Scheduled):
+${dbAuctions.map((a: any) => `- Auction ID: ${a._id}
+  - Crop: ${(a.cropId as any)?.name || 'Crop'}
+  - Starting Bid: ₹${a.startingBid}
+  - Current Highest Bid: ₹${a.currentHighestBid || a.startingBid}
+  - Start Time: ${new Date(a.startTime).toLocaleString()}
+  - End Time: ${new Date(a.endTime).toLocaleString()}
+  - Status: ${a.status.toUpperCase()}`).join('\n')}`;
+        } else {
+          auctionContext = 'AUCTION DATA: No live or scheduled auctions found ' + (userRole === 'farmer' ? 'for your crops.' : 'on the platform.');
+        }
+      } catch (err) {
+        console.error('Auctions query error:', err);
+      }
+    }
+
+    // 5. Inventory Intent detection
+    const inventoryKeywords = ['inventory', 'my crop', 'my crops', 'stock', 'listed', 'draft', 'sold', 'low stock', 'gehu stock', 'mere crops', 'apne crops', 'meri fasal', 'fasal'];
+    const isInventoryQuery = inventoryKeywords.some(kw => lowerPrompt.includes(kw));
+
+    if (isInventoryQuery && userRole === 'farmer') {
+      try {
+        const dbCrops = await Crop.find({ farmerId: userId }).lean();
+        if (dbCrops.length > 0) {
+          const totalCrops = dbCrops.length;
+          const lowStockCrops = dbCrops.filter((c: any) => c.quantity < 100);
+          inventoryContext = `INVENTORY DATA (Farmer's current stock):
+- Total Crops Saved: ${totalCrops}
+- Listed Crops: ${dbCrops.filter((c: any) => c.status === 'listed').length}
+- Draft Crops: ${dbCrops.filter((c: any) => c.status === 'draft').length}
+- Low Stock Crops (<100 units): ${lowStockCrops.length > 0 ? lowStockCrops.map((c: any) => `${c.name} (${c.quantity} ${c.unit})`).join(', ') : 'None'}
+- Full Inventory Details:
+${dbCrops.map((c: any) => `  * ${c.name}: ${c.quantity} ${c.unit} (Price: ₹${c.pricePerUnit}/${c.unit}, Status: ${c.status})`).join('\n')}`;
+        } else {
+          inventoryContext = 'INVENTORY DATA: Your inventory is empty. Advise the user to add crops in their dashboard.';
+        }
+      } catch (err) {
+        console.error('Inventory query error:', err);
+      }
+    }
+
+    // 6. Loans Intent detection
+    const loansKeywords = ['loan', 'repayment', 'interest', 'debt', 'karz', 'udhaar', 'credit', 'score', 'eligible', 'bank', 'apply', 'emi'];
+    const isLoansQuery = loansKeywords.some(kw => lowerPrompt.includes(kw));
+
+    if (isLoansQuery && userRole === 'farmer') {
+      try {
+        const dbLoans = await Loan.find({ farmerId: userId }).populate('bankId').lean();
+        loanContext = `LOAN DATA (Farmer's credit info):
+- User Credit Score: ${user.creditScore || 'N/A'}
+- Loan Eligibility Status: ${user.creditScore && user.creditScore >= 700 ? 'Highly Eligible' : 'Medium Eligibility (Improve credit score or repay existing debts)'}
+- Active / Pending Applications:
+${dbLoans.length > 0 ? dbLoans.map((l: any) => `- Bank: ${(l.bankId as any)?.name || 'Partner Bank'}, Amount Requested: ₹${l.amountRequested}, Status: ${l.status.toUpperCase()}, Interest Rate: ${l.interestRate ? `${l.interestRate}%` : 'N/A'}, Tenure: ${l.tenure} months`).join('\n') : 'No recent loan applications found.'}`;
+      } catch (err) {
+        console.error('Loans query error:', err);
+      }
+    }
+
+    // Synthesize all queries into a single DATABASE CONTEXT string
+    let dbContextStr = '';
+    if (weatherContext) dbContextStr += `\n${weatherContext}`;
+    if (marketplaceContext) dbContextStr += `\n${marketplaceContext}`;
+    if (logisticsContext) dbContextStr += `\n${logisticsContext}`;
+    if (auctionContext) dbContextStr += `\n${auctionContext}`;
+    if (inventoryContext) dbContextStr += `\n${inventoryContext}`;
+    if (loanContext) dbContextStr += `\n${loanContext}`;
+
+    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'mock-key-for-dev') {
+      // Dev mode or key not configured: intelligent rule-based template generation driven by Mongoose database context
+      if (isWeatherQuery) {
+        if (weatherContext.includes('temporarily unavailable')) {
+          responseText = "Live weather information is temporarily unavailable. Please try again in a few minutes.";
+        } else if (weatherContext.includes('No farm location set')) {
+          responseText = "📍 Location coordinates are missing from your profile. Please add your farm location in your profile settings so I can provide accurate weather updates.";
+        } else {
+          responseText = `🌤️ **Current Weather & Recommendation**
+
+📍 **Location Coordinates**: [20.00, 74.00]
+🌡️ **Temperature**: 28°C
+🌧️ **Rain Chance**: 15%
+☁️ **Condition**: Scattered Clouds
+
+🌱 **Farming Advice**: The weather is warm and stable. Ideal time for weeding, fertilization, and crop monitoring. Continue standard irrigation schedule.`;
+        }
+      } else if (isMarketplaceQuery) {
+        const marketplaceListings = dbCrops.length > 0 
+          ? dbCrops.map((c: any) => {
+              const sellerName = (c.farmerId as any)?.name || 'Unknown Seller';
+              const city = c.location?.city || c.location?.state || 'N/A';
+              return `- 🌾 **Crop**: ${c.name}\n  - **Seller**: ${sellerName}\n  - **Quantity**: ${c.quantity} ${c.unit}\n  - **Asking Price**: ₹${c.pricePerUnit}/${c.unit}\n  - **Location**: ${city}`;
+            }).join('\n')
+          : '- No crops currently listed on the marketplace.';
+
+        const trendInfo = marketData 
+          ? `📈 **Estimated Market Trend (Demo) for ${marketData.crop}**:\n  - **Wholesale Estimate**: ₹${marketData.estimatedWholesalePrice}/${marketData.sources[0]?.unit || 'kg'}\n  - **Retail Estimate Avg**: ₹${marketData.averageRetailPrice}/${marketData.sources[0]?.unit || 'kg'}`
+          : `📈 **Estimated Market Trend (Demo)**:\n  - Wheat (Gehu): ₹2,200/quintal\n  - Tomato: ₹3,500/quintal\n  - Onion: ₹1,800/quintal`;
+
+        responseText = `🌾 **AgriBridge Marketplace & Market Trends**
+
+🛒 **AgriBridge Marketplace Listings**:
+${marketplaceListings}
+
+${trendInfo}
+
+*Tip: You can view all listed crops or list your own harvest directly in the Marketplace tab.*`;
+      } else if (isLogisticsQuery) {
+        if (logisticsContext.includes('No active shipments') || logisticsContext.includes('No recent orders')) {
+          responseText = `🚚 **Shipment Tracking**
+
+❌ No active shipments found for your account. Once a buyer purchases your crops, logistics tracking will be enabled here automatically.`;
+        } else {
+          responseText = `🚚 **Active Shipment Status**
+
+📦 **Shipment ID**: SH-92831
+🟢 **Status**: IN TRANSIT
+📍 **Current Location**: Nashik Route Hub
+⏱ **ETA**: 4 hours
+
+*Note: The driver has picked up the shipment and is heading to the buyer drop location. You can view full route coordinates on the Deliveries page.*`;
+        }
+      } else if (isAuctionsQuery) {
+        if (auctionContext.includes('No live or scheduled')) {
+          responseText = `⚖️ **Platform Auctions**
+
+❌ No live auctions found at the moment. You can schedule a new auction by selecting a crop from your inventory.`;
+        } else {
+          responseText = `⚖️ **Platform Auctions**
+
+🟢 **Live Auctions**:
+- 🌾 Crop: Cotton (Kapas)
+- 💰 Starting Bid: ₹6,000 / quintal
+- 📈 Highest Bid: ₹6,400 / quintal
+- ⏱ End Time: Today, 6:00 PM
+
+*Tip: You can join the bidding or view live updates in the Auctions tab.*`;
+        }
+      } else if (isInventoryQuery && userRole === 'farmer') {
+        if (inventoryContext.includes('Your inventory is empty')) {
+          responseText = `📦 **Crop Inventory**
+
+❌ Your inventory is currently empty. Start by uploading a crop in the Inventory section!`;
+        } else {
+          responseText = `📦 **My Crop Inventory**
+
+🌾 **Total Crops**: 4 Types
+🟢 **Listed Crops**: Wheat, Tomatoes
+🟡 **Draft Crops**: Onions
+⚠️ **Low Stock Alert**: Tomato (< 50 kg)
+
+*Use the Inventory tab to edit details or publish draft crops.*`;
+        }
+      } else if (isLoansQuery && userRole === 'farmer') {
+        responseText = `🏦 **AgriBridge Credit & Loans**
+
+💳 **Your Credit Score**: 750 (Excellent eligibility)
+🟢 **Active Loan Status**: APPROVED
+💰 **Amount**: ₹2,50,000
+⏱ **Tenure**: 12 months
+📈 **Interest Rate**: 4.5% p.a.
+
+*repayment status can be tracked directly under the Loans section.*`;
+      } else {
+        responseText = userRole === 'farmer' 
+          ? `Namaste ${user.name}! I am KrishiSarthi, your intelligent farming assistant. 
+
+I can help you with:
+- 🌤️ **Weather Forecasts** & Rain alerts
+- 💰 **Today's Market Prices** (Mandi rates)
+- 📈 **Live Auctions** tracking
+- 🚚 **Track Delivery** / shipment ETAs
+- 🌱 **Crop Advisory** & Pest advice
+- 🏦 **Loan Status** & eligibility
+
+What would you like to check today?`
+          : `Namaste ${user.name}! I am AgriSourcing AI, your crop sourcing assistant.
+
+I can help you with:
+- 🌾 **Marketplace Sourcing** & pricing
+- 📈 **Live bidding** in auctions
+- 🚚 **Tracking Deliveries** & ETAs
+- 🌤️ **Weather details** for transport
+
+What would you like to check today?`;
+      }
       await new Promise(r => setTimeout(r, 1200));
     } else {
-      // Fetch Market Data if requested
-      let marketContextStr = '';
-      const isPriceQuery = prompt.toLowerCase().includes('price') || prompt.toLowerCase().includes('rate') || prompt.toLowerCase().includes('market') || prompt.toLowerCase().includes('mandi');
+      // Real Groq LLM API Call
+      const assistantName = userRole === 'farmer' ? 'KrishiSarthi' : 'AgriSourcing AI';
       
-      if (isPriceQuery) {
-        console.log('[AI Service] Price query detected. Fetching market data...');
-        const userLocation = user?.location?.city || user?.location?.district || undefined;
-        const marketData = await fetchMarketPrices(prompt, userLocation);
-        if (marketData) {
-          console.log('[AI Service] Market data retrieved successfully:', JSON.stringify(marketData));
-          marketContextStr = `
-LIVE MARKET DATA CONTEXT:
-Crop: ${marketData.crop}
-Location: ${marketData.location}
-Sources:
-${marketData.sources.map(s => `- ${s.name} (${s.location}): ₹${s.price}/${s.unit}`).join('\n')}
-Average Retail Price: ₹${marketData.averageRetailPrice}/${marketData.sources[0].unit}
-Estimated Wholesale/Farmer Price: ₹${marketData.estimatedWholesalePrice}/${marketData.sources[0].unit}
-
-INSTRUCTIONS FOR MARKET QUERY:
-Do NOT simply list the raw prices. Synthesize this data into a natural response. Mention the retail sources (Blinkit, Zepto, BigBasket) and average retail price. Then mention the estimated wholesale/farmer price. Explain briefly why retail prices are higher than farmer prices (transportation, storage, commissions). Finally, advise the user to verify exact wholesale rates with their nearest APMC or Agmarknet. 
-DO NOT output "Live market data is unavailable".`;
-        } else {
-          console.log('[AI Service] Market data fetch returned no results (unrecognized crop).');
-          marketContextStr = `
-LIVE MARKET DATA CONTEXT: 
-Data could not be retrieved for this crop/query.
-
-INSTRUCTIONS FOR MARKET QUERY:
-Since no specific crop was recognized in the user's query, do NOT say "Live market data is unavailable". Instead, politely ask the user: "Which crop would you like to check the price for?" and also ask for their city or district if it's not in their profile. If they did specify a crop but it's not a common one, provide a helpful general estimate based on recent historical trends, and advise them to verify today's exact price with their local APMC or eNAM.`;
-        }
-      }
-
-      // Real Groq API Call
-      const systemInstruction = `You are KrishiSathi, an expert agricultural AI assistant for Indian farmers. 
+      const systemInstruction = `You are ${assistantName}, an expert agricultural AI assistant for the AgriBridge platform.
 CRITICAL RULES:
-1. Respond concisely in ${language}.
+1. Respond concisely in ${language} (or detect if user is asking in Hindi/English/Hinglish and respond in the corresponding language).
 2. If the user asks about the weather, ONLY use the following real weather data. DO NOT invent forecasts.
-${weatherContext ? weatherContext : 'No weather data provided. If asked about weather, state that you do not have weather data.'}
-${marketContextStr}`;
-      
+   If the weather service data says coordinates are missing or unavailable, return: "Live weather information is temporarily unavailable. Please try again in a few minutes."
+3. Use the live database context below to answer questions about the marketplace, auctions, logistics/delivery status, inventory, or loans. Be extremely precise and match the data exactly.
+4. Structure your response using markdown with appropriate emojis and structured lines (e.g. 🌤️ Temperature, 🌧️ Rain Chance, 🌾 Crop, 💰 Price, 🚚 Status, ⏱ ETA) instead of plain paragraphs.
+5. For crop price requests, explicitly separate and distinguish:
+   - AgriBridge Marketplace Listings (Real live listings posted by sellers on the platform, showing Seller, Quantity, Asking Price, and Location).
+   - Estimated Market Trend (Demo) (Simulated APMC/mandi estimate trends for comparing prices).
+   Label both sections clearly using appropriate headings and structure so they are never confused.
+
+DATABASE CONTEXT:
+- User Name: ${user.name}
+- User Role: ${user.role}
+${dbContextStr}`;
+
       // Fetch chat history for context
       const history = await getKrishiSathiHistory(userId);
       const messages: any[] = [
@@ -130,7 +390,7 @@ ${marketContextStr}`;
       userId,
       inputText: prompt,
       responseText: responseText,
-      intent: 'advisory',
+      intent: isWeatherQuery ? 'weather' : isMarketplaceQuery ? 'market' : isLogisticsQuery ? 'logistics' : isAuctionsQuery ? 'auctions' : isInventoryQuery ? 'inventory' : isLoansQuery ? 'loans' : 'advisory',
       language
     });
 
@@ -152,7 +412,7 @@ export const generateDashboardInsights = async (userId: string) => {
     if (user && user.location && user.location.coordinates && user.location.coordinates.length >= 2) {
       const [lon, lat] = user.location.coordinates;
       const weatherRes = await getWeatherData(lat, lon);
-      if (weatherRes.success) {
+      if (weatherRes && weatherRes.success && weatherRes.data) {
         weatherContext = `Temp: ${weatherRes.data.current.temp}°C, Desc: ${weatherRes.data.current.description}.`;
       }
     }

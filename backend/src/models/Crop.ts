@@ -23,6 +23,7 @@ export interface ICrop extends Document {
     state?: string;
     zipCode?: string;
   };
+  isDemoAccount?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +56,7 @@ const cropSchema = new Schema<ICrop>(
       state: { type: String },
       zipCode: { type: String },
     },
+    isDemoAccount: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

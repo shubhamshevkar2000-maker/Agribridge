@@ -9,6 +9,7 @@ export interface IOrder extends Document {
   totalAmount: number;
   paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
   deliveryStatus: 'pending' | 'confirmed' | 'picked_up' | 'in_transit' | 'delivered' | 'cancelled';
+  isDemoAccount?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +32,7 @@ const orderSchema = new Schema<IOrder>(
       enum: ['pending', 'confirmed', 'picked_up', 'in_transit', 'delivered', 'cancelled'],
       default: 'pending',
     },
+    isDemoAccount: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

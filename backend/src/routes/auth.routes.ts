@@ -1,11 +1,25 @@
 import { Router } from 'express';
-import { signup, login, getMe, updateMe } from '../controllers/auth.controller';
+import { signup, login, getMe, updateMe, forgotPassword, resetPassword } from '../controllers/auth.controller';
 import { protect } from '../middlewares/auth.middleware';
+import rateLimit from 'express-rate-limit';
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // Limit each IP to 5 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many password reset requests. Please try again after an hour.'
+  }
+});
 
 const router = Router();
 
 router.post('/signup', signup);
 router.post('/login', login);
+router.post('/forgot-password', forgotPasswordLimiter, forgotPassword);
+router.post('/reset-password', resetPassword);
 router.get('/me', protect, getMe);
 router.put('/me', protect, updateMe);
 

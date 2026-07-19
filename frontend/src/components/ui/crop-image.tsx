@@ -1,17 +1,16 @@
 import React from 'react';
-
-const NO_IMAGE_PLACEHOLDER = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none"><rect width="800" height="600" fill="%231E293B"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-size="32" font-weight="bold" fill="%2364748B">No Image Available</text></svg>`;
+import { getValidImageUrl } from '@/utils/cropImages';
 
 interface CropImageProps {
   images?: string[];
   alt?: string;
   className?: string;
+  cropName?: string;
 }
 
-export function CropImage({ images, alt = 'Crop Image', className = 'w-full h-full object-cover' }: CropImageProps) {
-  const src = (images && images.length > 0 && images[0] && !images[0].includes('placehold.co') && (images[0].startsWith('http') || images[0].startsWith('data:')))
-    ? images[0]
-    : NO_IMAGE_PLACEHOLDER;
+export function CropImage({ images, alt = 'Crop Image', className = 'w-full h-full object-cover', cropName }: CropImageProps) {
+  const imageUrl = images && images.length > 0 ? images[0] : undefined;
+  const src = getValidImageUrl(imageUrl, cropName || alt);
 
   return (
     <img

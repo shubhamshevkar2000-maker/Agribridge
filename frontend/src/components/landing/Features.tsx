@@ -2,11 +2,11 @@
 
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Gavel, Truck, Cpu, ShieldCheck, Store, Mic } from 'lucide-react';
+import { Gavel, Truck, Cpu, ShieldCheck, Store, ClipboardCheck } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { TranslationKey } from '@/lib/translations';
 
-const featureIcons = [Gavel, Truck, Cpu, ShieldCheck, Store, Mic];
+const featureIcons = [Gavel, Truck, Cpu, ShieldCheck, Store, ClipboardCheck];
 const featureTitleKeys: TranslationKey[] = ['feature1Title', 'feature2Title', 'feature3Title', 'feature4Title', 'feature5Title', 'feature6Title'];
 const featureDescKeys: TranslationKey[] = ['feature1Desc', 'feature2Desc', 'feature3Desc', 'feature4Desc', 'feature5Desc', 'feature6Desc'];
 

@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { CropCard } from '@/components/ui/crop-card';
 import { GridSkeleton } from '@/components/ui/loading-skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { io } from 'socket.io-client';
 
 interface Crop {
   _id: string;
@@ -39,7 +40,7 @@ interface Crop {
 
 export default function MarketplacePage() {
   const [crops, setCrops] = useState<Crop[]>([]);
-  const [priceRange, setPriceRange] = useState([100, 10000]);
+  const [priceRange, setPriceRange] = useState([0, 10000]);
   const [loading, setLoading] = useState(true);
 
   // Filters state
@@ -74,6 +75,42 @@ export default function MarketplacePage() {
       const data = await res.json();
       if (data.success) {
         setCrops(data.data);
+
+        if (process.env.NEXT_PUBLIC_MARKETPLACE_DEBUG === 'true') {
+          console.log('[Marketplace Client Debug] Total API records received:', data.data.length);
+          const activeFilters = {
+            search,
+            category,
+            isOrganic,
+            priceRange,
+            location: { district, state, pincode },
+            minQuantity
+          };
+          console.log('[Marketplace Client Debug] Active filters:', activeFilters);
+
+          const renderedIds: string[] = [];
+          data.data.forEach((c: Crop) => {
+            let mismatchReason = '';
+            if (c.pricePerUnit < priceRange[0] || c.pricePerUnit > priceRange[1]) {
+              mismatchReason = `Price ${c.pricePerUnit} outside range [${priceRange[0]}, ${priceRange[1]}]`;
+            } else if (category !== 'All' && c.category !== category) {
+              mismatchReason = `Category mismatch: ${c.category} !== ${category}`;
+            } else if (isOrganic && !c.isOrganic) {
+              mismatchReason = `Organic flag mismatch`;
+            } else if (search && !c.name.toLowerCase().includes(search.toLowerCase())) {
+              mismatchReason = `Search term mismatch: "${c.name}" doesn't match "${search}"`;
+            }
+
+            if (mismatchReason) {
+              console.log(`[Marketplace Client Debug] Crop "${c.name}" (ID: ${c._id}) was filtered out on client because: ${mismatchReason}`);
+            } else {
+              renderedIds.push(c._id);
+              console.log(`[Marketplace Client Debug] Rendered Crop: "${c.name}" (ID: ${c._id}) Price: ₹${c.pricePerUnit}, Qty: ${c.quantity} ${c.unit}`);
+            }
+          });
+          console.log('[Marketplace Client Debug] Records after frontend filtering:', renderedIds.length);
+          console.log('[Marketplace Client Debug] IDs of rendered crops:', renderedIds);
+        }
       }
     } catch (err) {
       console.error('Error fetching crops:', err);
@@ -86,11 +123,28 @@ export default function MarketplacePage() {
     fetchCrops();
   }, [category, isOrganic, search, priceRange, district, state, pincode, minQuantity]);
 
+  useEffect(() => {
+    const socketUrl = typeof window !== 'undefined'
+      ? (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')
+      : '';
+    const socket = io(socketUrl);
+
+    socket.on('marketplace:update', () => {
+      console.log('[Socket] Marketplace update event received, refreshing...');
+      fetchCrops();
+    });
+
+    return () => {
+      socket.off('marketplace:update');
+      socket.disconnect();
+    };
+  }, [category, isOrganic, search, priceRange, district, state, pincode, minQuantity]);
+
   const resetFilters = () => {
     setSearch('');
     setCategory('All');
     setIsOrganic(false);
-    setPriceRange([100, 10000]);
+    setPriceRange([0, 10000]);
     setDistrict('');
     setState('');
     setPincode('');
@@ -124,7 +178,7 @@ export default function MarketplacePage() {
             <div>
               <h4 className="font-semibold text-sm mb-3">Price Range (₹/unit)</h4>
               <Slider 
-                defaultValue={[100, 10000]} 
+                defaultValue={[0, 10000]} 
                 max={10000} 
                 step={50}
                 value={priceRange}
@@ -231,10 +285,10 @@ export default function MarketplacePage() {
           ) : crops.length === 0 ? (
             <EmptyState 
               icon={Store} 
-              title="No Crops Found" 
-              description="We couldn't find any crops matching your criteria. Try adjusting filters or refresh the marketplace."
-              ctaText="Reset Filters"
-              ctaHref="#"
+              title="No Crops Available" 
+              description="No farmers have listed crops yet. Once farmers publish crops, they will appear here automatically."
+              ctaText="Refresh"
+              onCtaClick={fetchCrops}
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

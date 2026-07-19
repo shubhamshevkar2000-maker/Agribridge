@@ -5,15 +5,12 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
-import { Stats } from '@/components/landing/Stats';
 import { Features } from '@/components/landing/Features';
 import { 
   fetchCrops, 
   fetchFAQs, 
-  fetchTestimonials, 
   Crop, 
-  FAQItem, 
-  Testimonial 
+  FAQItem 
 } from '@/lib/mockService';
 import { 
   ArrowRight, 
@@ -23,10 +20,10 @@ import {
   Star, 
   Clock, 
   Sparkles, 
-  Gavel, 
-  Mail, 
-  Phone, 
-  Globe 
+  Gavel,
+  Sprout,
+  Truck,
+  Brain
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -38,13 +35,11 @@ export default function LandingPage() {
   const { t } = useLanguage();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [activeAuctionBid, setActiveAuctionBid] = useState(4250);
 
   useEffect(() => {
     fetchCrops().then(data => setCrops(data.slice(0, 3)));
     fetchFAQs().then(setFaqs);
-    fetchTestimonials().then(setTestimonials);
 
     const interval = setInterval(() => {
       setActiveAuctionBid(prev => prev + Math.floor(Math.random() * 150) + 50);
@@ -56,8 +51,6 @@ export default function LandingPage() {
     <main className="min-h-screen bg-background selection:bg-primary/20 selection:text-primary relative overflow-hidden">
       <Navbar />
       <Hero />
-      <Stats />
-      
       <Features />
 
       {/* How It Works Section */}
@@ -311,36 +304,65 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Success Stories / Testimonials */}
-      <section className="py-24 bg-secondary/30 relative">
+      {/* Why AgriBridge Section */}
+      <section className="py-24 bg-background relative border-t border-b border-border/40">
         <div className="container mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-16">
             <Badge variant="outline" className="glass px-4 py-1.5 rounded-full text-sm font-medium border-primary/20 text-primary">
-              {t('testimonialsBadge')}
+              Why AgriBridge
             </Badge>
-            <h2 className="text-3xl md:text-5xl font-heading font-bold mt-4">
-              {t('testimonialsTitle')}
+            <h2 className="text-3xl md:text-5xl font-heading font-bold mt-4 tracking-tight">
+              Everything Farmers and Buyers Need in One Platform
             </h2>
+            <p className="text-muted-foreground mt-4 text-base md:text-lg">
+              AgriBridge simplifies agricultural trading by connecting farmers, buyers, logistics, and auctions into one intelligent ecosystem.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {testimonials.map((test, idx) => (
-              <div key={idx} className="glass-card p-8 rounded-2xl border border-border/50 flex flex-col justify-between">
-                <div>
-                  <div className="text-primary font-heading font-bold text-lg mb-4">{test.impact}</div>
-                  <p className="text-muted-foreground italic leading-relaxed text-[15px] mb-6">"{test.quote}"</p>
-                </div>
-                <div className="flex items-center gap-3 pt-4 border-t border-border/50">
-                  <div className="size-10 bg-primary/10 rounded-full flex items-center justify-center font-bold text-primary text-sm">
-                    {test.author.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm">{test.author}</div>
-                    <div className="text-xs text-muted-foreground">{test.role} • {test.location}</div>
-                  </div>
-                </div>
+            {/* Direct Marketplace */}
+            <div className="p-8 rounded-2xl border border-border bg-white shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 flex flex-col gap-4">
+              <div className="size-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                <Sprout className="w-6 h-6" />
               </div>
-            ))}
+              <h3 className="text-xl font-heading font-bold text-foreground">Direct Farmer-to-Buyer Marketplace</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Enable farmers to sell directly to verified buyers without middlemen, ensuring transparent pricing and better profits.
+              </p>
+            </div>
+
+            {/* Smart Auctions */}
+            <div className="p-8 rounded-2xl border border-border bg-white shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 flex flex-col gap-4">
+              <div className="size-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                <Gavel className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-heading font-bold text-foreground">Transparent Live Auctions</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Conduct real-time bidding to help farmers receive competitive market prices through a fair and transparent auction process.
+              </p>
+            </div>
+
+            {/* Integrated Logistics */}
+            <div className="p-8 rounded-2xl border border-border bg-white shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 flex flex-col gap-4">
+              <div className="size-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                <Truck className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-heading font-bold text-foreground">End-to-End Logistics</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Manage pickup scheduling, shipment tracking, and delivery updates through an integrated logistics workflow.
+              </p>
+            </div>
+
+            {/* AI-Powered Insights */}
+            <div className="p-8 rounded-2xl border border-border bg-white shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 flex flex-col gap-4">
+              <div className="size-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                <Brain className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-heading font-bold text-foreground">AI-Driven Decision Support</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Provide intelligent recommendations using market trends, crop analytics, and predictive insights to support better farming and purchasing decisions.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -375,87 +397,25 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section id="contact" className="py-24 bg-secondary/30 relative">
-        <div className="container mx-auto px-6 max-w-5xl">
-          <div className="glass-card rounded-3xl border border-border/50 p-8 lg:p-16 grid lg:grid-cols-2 gap-12 items-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10" />
-            <div>
-              <Badge variant="outline" className="glass px-4 py-1.5 rounded-full text-sm font-medium border-primary/20 text-primary">
-                {t('contactBadge')}
-              </Badge>
-              <h2 className="text-3xl md:text-4xl font-heading font-bold mt-4">
-                {t('contactTitle')}
-              </h2>
-              <p className="text-muted-foreground mt-4 text-sm leading-relaxed mb-8">
-                {t('contactDesc')}
-              </p>
-
-              <div className="space-y-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-3"><Mail className="w-4 h-4 text-primary" /> support@agribridge.in</div>
-                <div className="flex items-center gap-3"><Phone className="w-4 h-4 text-primary" /> +91 (22) 555-0199</div>
-                <div className="flex items-center gap-3"><Globe className="w-4 h-4 text-primary" /> www.agribridge.in</div>
-              </div>
-            </div>
-
-            <form onSubmit={e => e.preventDefault()} className="space-y-4 bg-background/50 p-6 rounded-2xl border border-border/30">
-              <Input placeholder={t('contactName')} className="h-12 bg-background/60" />
-              <Input placeholder={t('contactEmail')} type="email" className="h-12 bg-background/60" />
-              <textarea placeholder={t('contactMsg')} className="w-full h-32 p-4 rounded-xl border border-input bg-background/60 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary" />
-              <Button className="w-full h-12 bg-primary-gradient">{t('contactBtn')}</Button>
-            </form>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
-      <footer className="border-t border-border bg-secondary/50 py-16 text-muted-foreground text-sm relative z-10">
-        <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
-            <div className="flex flex-col gap-4">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary-gradient flex items-center justify-center text-white font-heading font-bold text-xl">
-                  A
-                </div>
-                <span className="font-heading font-bold text-xl tracking-tight text-foreground">
-                  AgriBridge
-                </span>
-              </Link>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {t('footerDesc')}
-              </p>
+      <footer className="border-t border-border bg-secondary/30 py-8 text-muted-foreground text-sm relative z-10">
+        <div className="container mx-auto px-6 flex flex-col items-center text-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-primary-gradient flex items-center justify-center text-white font-heading font-bold text-sm">
+              A
             </div>
-            <div>
-              <h4 className="font-heading font-semibold text-foreground mb-4">{t('footerPlatform')}</h4>
-              <ul className="space-y-2 text-xs">
-                <li><Link href="#product" className="hover:text-primary transition-colors">{t('navProduct')}</Link></li>
-                <li><Link href="#marketplace" className="hover:text-primary transition-colors">{t('navMarketplace')}</Link></li>
-                <li><Link href="#pricing" className="hover:text-primary transition-colors">{t('navPricing')}</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-heading font-semibold text-foreground mb-4">{t('footerResources')}</h4>
-              <ul className="space-y-2 text-xs">
-                <li><Link href="#faq" className="hover:text-primary transition-colors">{t('footerFAQs')}</Link></li>
-                <li><Link href="#how-it-works" className="hover:text-primary transition-colors">{t('footerHowItWorks')}</Link></li>
-              </ul>
-            </div>
-            <div className="flex flex-col gap-4">
-              <h4 className="font-heading font-semibold text-foreground mb-4">{t('footerNewsletter')}</h4>
-              <p className="text-xs text-muted-foreground">{t('footerNewsletterDesc')}</p>
-              <div className="flex gap-2">
-                <Input placeholder={t('footerEmail')} className="h-10 bg-background/50" />
-                <Button size="sm" className="h-10 bg-primary-gradient px-4">{t('footerJoin')}</Button>
-              </div>
-            </div>
+            <span className="font-heading font-bold text-lg tracking-tight text-foreground">
+              AgriBridge
+            </span>
           </div>
-          <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-border/30 text-xs gap-4">
-            <p>{t('footerRights')}</p>
-            <div className="flex gap-6">
-              <Link href="#" className="hover:underline">{t('footerPrivacy')}</Link>
-              <Link href="#" className="hover:underline">{t('footerTerms')}</Link>
-            </div>
-          </div>
+          
+          <p className="text-xs text-muted-foreground max-w-md">
+            Empowering Farmers through AI Marketplace and Smart Logistics.
+          </p>
+
+          <p className="text-[11px] text-muted-foreground/60 mt-1">
+            © 2026 AgriBridge. All rights reserved.
+          </p>
         </div>
       </footer>
     </main>

@@ -8,11 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
-<<<<<<< HEAD
 import { CropImage } from '@/components/ui/crop-image';
-=======
-import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
->>>>>>> nidhi/logistics-enhancement
 
 interface Crop {
   _id: string;
@@ -416,13 +412,8 @@ export default function FarmerAuctionsPage() {
                     <div>
                       {/* Premium crop image header */}
                       <div className="relative h-44 overflow-hidden bg-muted flex items-center justify-center shrink-0">
-<<<<<<< HEAD
                         <CropImage 
                           images={auction.cropId?.images} 
-=======
-                        <img 
-                          src={getValidImageUrl(auction.cropId?.images?.[0], auction.cropId?.name)} 
->>>>>>> nidhi/logistics-enhancement
                           alt={auction.cropId?.name || 'Crop'} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                         />

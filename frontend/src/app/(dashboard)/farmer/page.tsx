@@ -13,11 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
-<<<<<<< HEAD
 import { CropImage } from '@/components/ui/crop-image';
-=======
-import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
->>>>>>> nidhi/logistics-enhancement
 
 import { api } from '@/lib/api';
 
@@ -245,7 +241,6 @@ export default function FarmerDashboard() {
                 auctions.live.slice(0, 3).map((auction: any) => (
                   <div key={auction._id} className="flex justify-between items-center p-4 bg-secondary/30 rounded-xl mb-3 border border-border/50">
                     <div className="flex items-center gap-4">
-<<<<<<< HEAD
                       <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0">
                         <CropImage 
                           images={auction.cropId?.images} 
@@ -253,14 +248,6 @@ export default function FarmerDashboard() {
                           className="w-full h-full object-cover"
                         />
                       </div>
-=======
-                      <img 
-                        src={getValidImageUrl(auction.cropId?.images?.[0], auction.cropId?.name)} 
-                        alt={auction.cropId?.name || "Crop"} 
-                        className="w-12 h-12 rounded-lg object-cover"
-                        loading="lazy"
-                      />
->>>>>>> nidhi/logistics-enhancement
                       <div>
                         <h4 className="font-semibold">{auction.cropId?.name || "Crop"}</h4>
                         <p className="text-sm text-muted-foreground">Ends in: {Math.max(0, Math.round((new Date(auction.endTime).getTime() - Date.now()) / 3600000))} hrs</p>

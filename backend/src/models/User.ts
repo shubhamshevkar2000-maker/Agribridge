@@ -33,6 +33,8 @@ export interface IUser extends Document {
     whatsapp: boolean;
   };
   isDemoAccount?: boolean;
+  resetPasswordToken?: string;
+  resetPasswordExpire?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,6 +81,8 @@ const userSchema = new Schema<IUser>(
       whatsapp: { type: Boolean, default: true },
     },
     isDemoAccount: { type: Boolean, default: false },
+    resetPasswordToken: { type: String },
+    resetPasswordExpire: { type: Date },
   },
   { timestamps: true }
 );

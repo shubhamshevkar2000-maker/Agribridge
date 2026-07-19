@@ -7,6 +7,20 @@ import cloudinary, { safeUpload } from '../config/cloudinary';
 
 const router = Router();
 
+const emitMarketplaceUpdate = () => {
+  try {
+    const { getIO } = require('../config/socket');
+    const io = getIO();
+    if (io) {
+      io.emit('marketplace:update');
+      console.log('[Socket] Emitted marketplace:update');
+    }
+  } catch (err: any) {
+    console.error('[Socket] Failed to emit marketplace:update:', err.message);
+  }
+};
+
+
 const locationSchema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
@@ -126,6 +140,11 @@ router.post('/', protect, async (req: any, res) => {
       status
     });
     
+    if (process.env.MARKETPLACE_DEBUG === 'true') {
+      console.log(`[Marketplace Debug] [Lifecycle: Created] Crop Created: ID=${crop._id}, Name="${crop.name}", FarmerID=${crop.farmerId}, Status=${crop.status}, Price=${crop.pricePerUnit}, Qty=${crop.quantity}, ImagesCount=${crop.images?.length || 0}`);
+    }
+
+    emitMarketplaceUpdate();
     res.status(201).json({ success: true, data: crop });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -148,6 +167,11 @@ router.patch('/:id/publish', protect, async (req: any, res) => {
       return res.status(404).json({ success: false, message: 'Crop not found or already published' });
     }
 
+    if (process.env.MARKETPLACE_DEBUG === 'true') {
+      console.log(`[Marketplace Debug] [Lifecycle: Published] Crop Published: ID=${crop._id}, Name="${crop.name}", FarmerID=${crop.farmerId}, Status=${crop.status}`);
+    }
+
+    emitMarketplaceUpdate();
     res.json({ success: true, data: crop, message: 'Crop listing published successfully' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -167,6 +191,11 @@ router.patch('/:id/unpublish', protect, async (req: any, res) => {
       return res.status(404).json({ success: false, message: 'Crop not found or not listed' });
     }
 
+    if (process.env.MARKETPLACE_DEBUG === 'true') {
+      console.log(`[Marketplace Debug] [Lifecycle: Unpublished] Crop Unpublished: ID=${crop._id}, Name="${crop.name}", FarmerID=${crop.farmerId}, Status=${crop.status}`);
+    }
+
+    emitMarketplaceUpdate();
     res.json({ success: true, data: crop, message: 'Crop listing unpublished successfully' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -238,6 +267,11 @@ router.put('/:id', protect, async (req: any, res) => {
 
     await crop.save();
     
+    if (process.env.MARKETPLACE_DEBUG === 'true') {
+      console.log(`[Marketplace Debug] [Lifecycle: Updated] Crop Updated: ID=${crop._id}, Name="${crop.name}", FarmerID=${crop.farmerId}, Status=${crop.status}, Price=${crop.pricePerUnit}, Qty=${crop.quantity}`);
+    }
+
+    emitMarketplaceUpdate();
     res.json({ success: true, data: crop });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -260,6 +294,11 @@ router.delete('/:id', protect, async (req: any, res) => {
 
     await crop.deleteOne();
     
+    if (process.env.MARKETPLACE_DEBUG === 'true') {
+      console.log(`[Marketplace Debug] [Lifecycle: Deleted] Crop Deleted: ID=${crop._id}, Name="${crop.name}", FarmerID=${crop.farmerId}`);
+    }
+
+    emitMarketplaceUpdate();
     res.json({ success: true, message: 'Crop deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -271,16 +310,8 @@ router.get('/', protect, async (req: any, res) => {
   try {
     const { category, isOrganic, search, minPrice, maxPrice, minQuantity, district, state, zipCode, pincode } = req.query;
     
-    const requester = await User.findById(req.user.id);
-    const isDemo = requester ? requester.isDemoAccount === true : false;
-
-    // Find active farmers matching location criteria
+    // Find active farmers matching location criteria (removed isDemoAccount segregation)
     const farmerQuery: any = { role: 'farmer' };
-    if (isDemo) {
-      farmerQuery.isDemoAccount = true;
-    } else {
-      farmerQuery.isDemoAccount = { $ne: true };
-    }
     
     if (district) farmerQuery['location.district'] = { $regex: district as string, $options: 'i' };
     if (state) farmerQuery['location.state'] = { $regex: state as string, $options: 'i' };
@@ -320,7 +351,76 @@ router.get('/', protect, async (req: any, res) => {
       .sort({ createdAt: -1 });
 
     // Validate that farmer is active and populate succeeded
-    const filteredCrops = crops.filter(c => c.farmerId !== null);
+    const filteredCrops = crops.filter(c => {
+      if (!c.farmerId) {
+        console.warn(`[Marketplace API Warning] Crop ${c._id} has an invalid or missing farmer reference (farmerId: ${c.farmerId}).`);
+        return false;
+      }
+      return true;
+    });
+
+    if (process.env.MARKETPLACE_DEBUG === 'true') {
+      const totalCropsCount = await Crop.countDocuments();
+      const totalPublishedCount = await Crop.countDocuments({ status: 'listed' });
+      console.log(`[Marketplace Debug] [Retrieval] Total crops in DB: ${totalCropsCount}`);
+      console.log(`[Marketplace Debug] [Retrieval] Total published (listed) crops: ${totalPublishedCount}`);
+      console.log(`[Marketplace Debug] [Retrieval] Applied query filters:`, JSON.stringify(query));
+      console.log(`[Marketplace Debug] [Retrieval] Price range received: minPrice = ${minPrice || 'none'}, maxPrice = ${maxPrice || 'none'}`);
+      console.log(`[Marketplace Debug] [Retrieval] Crops matched by DB query: ${crops.length}`);
+      console.log(`[Marketplace Debug] [Retrieval] Final crops returned after user validation: ${filteredCrops.length}`);
+
+      // Perform complete filtered-out crop analysis
+      const allCropsInDb = await Crop.find({}).populate({
+        path: 'farmerId',
+        select: 'name role location trustScore isDemoAccount'
+      });
+      const returnedCropsSet = new Set(filteredCrops.map(c => c._id.toString()));
+
+      for (const c of allCropsInDb) {
+        if (!returnedCropsSet.has(c._id.toString())) {
+          let reason = '';
+          const farmer = c.farmerId as any;
+          if (c.status !== 'listed') {
+            reason = `unpublished (status: '${c.status}')`;
+          } else if (c.quantity <= 0) {
+            reason = `quantity <= 0 (${c.quantity})`;
+          } else if (!farmer) {
+            reason = 'invalid or deleted farmer reference';
+          } else if (farmer.role !== 'farmer') {
+            reason = `farmer has invalid role: '${farmer.role}'`;
+          } else if (minPrice && c.pricePerUnit < Number(minPrice)) {
+            reason = `price (${c.pricePerUnit}) below minPrice (${minPrice})`;
+          } else if (maxPrice && c.pricePerUnit > Number(maxPrice)) {
+            reason = `price (${c.pricePerUnit}) above maxPrice (${maxPrice})`;
+          } else if (category && category !== 'All' && c.category !== category) {
+            reason = `category mismatch (crop category: '${c.category}', filter category: '${category}')`;
+          } else if (isOrganic === 'true' && !c.isOrganic) {
+            reason = 'organic mismatch (crop is not organic)';
+          } else if (search && !new RegExp(search as string, 'i').test(c.name)) {
+            reason = `search name mismatch (crop name: "${c.name}", search: "${search}")`;
+          } else if (minQuantity && c.quantity < Number(minQuantity)) {
+            reason = `quantity (${c.quantity}) below minQuantity (${minQuantity})`;
+          } else if (district || state || zipCode || pincode) {
+            const districtMatch = !district || (farmer.location?.district && new RegExp(district as string, 'i').test(farmer.location.district));
+            const stateMatch = !state || (farmer.location?.state && new RegExp(state as string, 'i').test(farmer.location.state));
+            const zipMatch = !(zipCode || pincode) || (farmer.location?.zipCode === (zipCode || pincode));
+            if (!districtMatch || !stateMatch || !zipMatch) {
+              reason = `location filter mismatch (districtMatch: ${!!districtMatch}, stateMatch: ${!!stateMatch}, zipMatch: ${!!zipMatch})`;
+            } else {
+              reason = 'filtered out by location constraints';
+            }
+          } else {
+            reason = 'other query constraints';
+          }
+          console.log(`[Marketplace Debug] Crop "${c.name}" (ID: ${c._id}, price: ${c.pricePerUnit}) was filtered out because: ${reason}`);
+        } else {
+          // Log data consistency comparison showing stored vs response price
+          const imagesCount = c.images?.length || 0;
+          console.log(`[Marketplace Debug] Crop "${c.name}" (ID: ${c._id}) price & consistency verification: Stored DB price: ${c.pricePerUnit}, API response price: ${c.pricePerUnit}, Farmer ID: ${c.farmerId?._id || 'null'}, status: ${c.status}, quantity: ${c.quantity}, imagesCount: ${imagesCount}, published: true`);
+        }
+      }
+    }
+
     res.json({ success: true, data: filteredCrops });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -336,20 +436,18 @@ router.get('/:id', protect, async (req: any, res) => {
     if (!crop) {
       return res.status(404).json({ success: false, message: 'Crop not found' });
     }
-
     const farmer = crop.farmerId as any;
-    if (!farmer || farmer.role !== 'farmer') {
+    if (!farmer) {
+      console.warn(`[Crop Details API Warning] Crop ${crop._id} is orphaned. Referenced farmer user does not exist.`);
+      return res.status(404).json({ success: false, message: 'Farmer inactive or not found' });
+    }
+    if (farmer.role !== 'farmer') {
+      console.warn(`[Crop Details API Warning] Crop ${crop._id} owner ${farmer._id} does not have the farmer role (role: ${farmer.role}).`);
       return res.status(404).json({ success: false, message: 'Farmer inactive or not found' });
     }
 
     if (crop.status !== 'listed' && crop.status !== 'in_auction') {
       return res.status(404).json({ success: false, message: 'Listing is not active' });
-    }
-
-    const requester = await User.findById(req.user.id);
-    const isDemo = requester ? requester.isDemoAccount === true : false;
-    if (isDemo !== (farmer.isDemoAccount === true)) {
-      return res.status(404).json({ success: false, message: 'Listing is not available' });
     }
 
     const cropObj: any = crop.toObject();
@@ -375,10 +473,7 @@ router.get('/:id', protect, async (req: any, res) => {
     .populate('farmerId', 'name role location trustScore isDemoAccount')
     .limit(4);
 
-    const filteredRelated = relatedCrops.filter((c: any) => {
-      const f = c.farmerId as any;
-      return f && (isDemo === (f.isDemoAccount === true));
-    });
+    const filteredRelated = relatedCrops.filter((c: any) => c.farmerId !== null);
 
     res.json({ success: true, data: cropObj, related: filteredRelated });
   } catch (error: any) {

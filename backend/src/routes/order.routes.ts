@@ -274,4 +274,191 @@ router.post('/:id/cancel', protect, async (req: any, res) => {
   }
 });
 
+// POST /api/orders/:id/accept - Farmer accepts the order
+router.post('/:id/accept', protect, async (req: any, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.farmerId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+    if (order.deliveryStatus !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Order is not in pending state' });
+    }
+
+    order.deliveryStatus = 'confirmed';
+    await order.save();
+
+    try {
+      await createNotification({
+        userId: order.buyerId,
+        type: 'order',
+        title: 'Order Accepted!',
+        message: `Your order for ${order.quantity} of crop has been accepted by the farmer.`
+      });
+    } catch (e) { console.error(e); }
+
+    res.json({ success: true, message: 'Order accepted successfully', data: order });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/orders/:id/reject - Farmer rejects the order
+router.post('/:id/reject', protect, async (req: any, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.farmerId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+    if (order.deliveryStatus !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Order is not in pending state' });
+    }
+
+    order.deliveryStatus = 'cancelled';
+    order.paymentStatus = 'refunded';
+    await order.save();
+
+    const { Delivery } = require('../models/Delivery');
+    const delivery = await Delivery.findOne({ orderId: order._id });
+    if (delivery) {
+      delivery.status = 'cancelled';
+      await delivery.save();
+    }
+
+    // Release inventory
+    const crop = await Crop.findById(order.cropId);
+    if (crop) {
+      crop.quantity += order.quantity;
+      if (crop.status === 'sold' || crop.status === 'in_auction') {
+        crop.status = 'listed';
+      }
+      await crop.save();
+    }
+
+    try {
+      await createNotification({
+        userId: order.buyerId,
+        type: 'order',
+        title: 'Order Rejected',
+        message: `Your order has been rejected by the farmer.`
+      });
+    } catch (e) { console.error(e); }
+
+    res.json({ success: true, message: 'Order rejected successfully', data: order });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/orders/:id/ready - Farmer marks ready for pickup
+router.post('/:id/ready', protect, async (req: any, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.farmerId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+    if (order.deliveryStatus !== 'confirmed') {
+      return res.status(400).json({ success: false, message: 'Order is not accepted/confirmed yet' });
+    }
+
+    const { Delivery } = require('../models/Delivery');
+    const delivery = await Delivery.findOne({ orderId: order._id });
+    if (!delivery) return res.status(404).json({ success: false, message: 'Delivery record not found' });
+
+    // Transition to Pickup Scheduled (order.deliveryStatus = picked_up, delivery.status = packed)
+    order.deliveryStatus = 'picked_up';
+    await order.save();
+
+    delivery.status = 'packed';
+    // Assign a mock logistics partner and driver
+    const logisticsPartners = await User.find({ role: 'logistics' });
+    if (logisticsPartners.length > 0) {
+      delivery.logisticsPartnerId = logisticsPartners[0]._id;
+    } else {
+      const anyUser = await User.findOne();
+      if (anyUser) delivery.logisticsPartnerId = anyUser._id;
+    }
+    
+    const drivers = await User.find({ role: 'logistics' });
+    if (drivers.length > 0) {
+      delivery.driverId = drivers[0]._id;
+    } else {
+      const anyUser = await User.findOne();
+      if (anyUser) delivery.driverId = anyUser._id;
+    }
+    
+    await delivery.save();
+
+    try {
+      await createNotification({
+        userId: order.buyerId,
+        type: 'order',
+        title: 'Order Ready for Pickup',
+        message: `Farmer has packed the order. Logistics partner is scheduled for pickup.`
+      });
+    } catch (e) { console.error(e); }
+
+    res.json({ success: true, message: 'Order marked ready for pickup', data: order });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/orders/:id/dispatch - Simulate logistics dispatch to transit
+router.post('/:id/dispatch', protect, async (req: any, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.farmerId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    const { Delivery } = require('../models/Delivery');
+    const delivery = await Delivery.findOne({ orderId: order._id });
+    if (!delivery) return res.status(404).json({ success: false, message: 'Delivery record not found' });
+
+    order.deliveryStatus = 'in_transit';
+    await order.save();
+
+    delivery.status = 'in_transit';
+    await delivery.save();
+
+    res.json({ success: true, message: 'Logistics pickup simulated successfully. Order is in transit.', data: order });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/orders/:id/out-for-delivery - Mark out for delivery and generate payment OTP
+router.post('/:id/out-for-delivery', protect, async (req: any, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.farmerId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const { Delivery } = require('../models/Delivery');
+    const delivery = await Delivery.findOne({ orderId: order._id });
+    if (!delivery) return res.status(404).json({ success: false, message: 'Delivery record not found' });
+
+    delivery.isOutForDelivery = true;
+    await delivery.save();
+
+    // Generate 6 digit OTP for delivery verification/cash payment receipt
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const redisKey = `cash_otp_${order._id}`;
+    await redisClient.setEx(redisKey, 900, otp);
+
+    console.log(`\n\n[MOCK SMS] -> To Farmer: Driver is out for delivery. Your OTP to verify receipt and complete delivery is: ${otp}\n\n`);
+
+    res.json({ success: true, message: 'Delivery is out. OTP generated successfully.', otp });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router;

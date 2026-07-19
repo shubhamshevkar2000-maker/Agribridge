@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 export interface IWishlist extends Document {
   buyerId: Types.ObjectId;
   cropIds: Types.ObjectId[];
+  isDemoAccount?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -10,7 +11,8 @@ export interface IWishlist extends Document {
 const wishlistSchema = new Schema<IWishlist>(
   {
     buyerId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-    cropIds: [{ type: Schema.Types.ObjectId, ref: 'Crop' }]
+    cropIds: [{ type: Schema.Types.ObjectId, ref: 'Crop' }],
+    isDemoAccount: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

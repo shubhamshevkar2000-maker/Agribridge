@@ -21,6 +21,8 @@ interface Delivery {
   createdAt: string;
 }
 
+import { EmptyState } from '@/components/ui/empty-state';
+
 export default function DeliveriesPage() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,13 +83,13 @@ export default function DeliveriesPage() {
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
       ) : deliveries.length === 0 ? (
-        <div className="glass-card p-16 text-center rounded-3xl border-border/50">
-          <Truck className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="text-xl font-heading font-bold mb-2">No Active Deliveries</h3>
-          <p className="text-muted-foreground max-w-sm mx-auto">
-            You don't have any ongoing shipments. Once your crops are purchased, the logistics timeline will appear here.
-          </p>
-        </div>
+        <EmptyState
+          icon={Truck}
+          title="No Active Deliveries"
+          description="You don't have any ongoing shipments. Once your crops are purchased, the logistics timeline will appear here."
+          ctaText="Explore Marketplace"
+          ctaHref="/farmer/inventory"
+        />
       ) : (
         <div className="space-y-6">
           <AnimatePresence>

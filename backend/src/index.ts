@@ -8,6 +8,7 @@ import { connectDB } from './config/db';
 import { connectRedis } from './config/redis';
 import { initializeSocket } from './config/socket';
 import { Auction } from './models/Auction';
+import { User } from './models/User';
 import { completeAuction } from './services/auction.service';
 
 const PORT = process.env.PORT || 5000;
@@ -22,6 +23,18 @@ const startServer = async () => {
   try {
     await connectDB();
     connectRedis();
+
+    // Auto-seed only in development or if ENABLE_DEMO_SEED=true
+    const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+    const enableDemoSeed = process.env.ENABLE_DEMO_SEED === 'true';
+    if (isDev || enableDemoSeed) {
+      const userCount = await User.countDocuments();
+      if (userCount === 0) {
+        console.log('Database is empty and in dev/seed mode. Seeding demo data...');
+        const { seedDemoData } = await import('./services/seed.service');
+        await seedDemoData();
+      }
+    }
     
     server.listen(PORT, () => {
       console.log(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);

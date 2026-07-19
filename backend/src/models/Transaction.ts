@@ -8,6 +8,7 @@ export interface ITransaction extends Document {
   mode: 'cash' | 'upi' | 'bank' | 'wallet';
   status: 'pending' | 'success' | 'failed' | 'refunded';
   timestamp: Date;
+  isDemoAccount?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +30,7 @@ const transactionSchema = new Schema<ITransaction>(
       default: 'pending',
     },
     timestamp: { type: Date, default: Date.now },
+    isDemoAccount: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

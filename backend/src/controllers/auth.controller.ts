@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { z } from 'zod';
 import { User } from '../models/User';
 import { KYC } from '../models/KYC';
@@ -304,3 +305,118 @@ export const updateMe = async (req: any, res: Response) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const emailSchema = z.string().email();
+    const parseResult = emailSchema.safeParse(email);
+    if (!parseResult.success) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // Audit log failed attempt (user not found)
+      console.log(`[AUDIT] Password reset link requested. Timestamp: ${new Date().toISOString()}, IP: ${req.ip}, User ID: N/A, Status: Failed (User not found)`);
+      
+      // Generic response to prevent account enumeration
+      return res.json({
+        success: true,
+        message: 'If an account with this email exists, a password reset link has been sent.'
+      });
+    }
+
+    // Generate secure reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Hash it before storing in the database
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpire = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    await user.save();
+
+    // Print reset link to the console in development
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3000';
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+    console.log(`\n========================================`);
+    console.log(`[PASSWORD RESET] Reset URL for ${email}:`);
+    console.log(resetUrl);
+    console.log(`========================================\n`);
+
+    // Audit log success
+    console.log(`[AUDIT] Password reset link requested. Timestamp: ${new Date().toISOString()}, IP: ${req.ip}, User ID: ${user._id}, Status: Success`);
+
+    res.json({
+      success: true,
+      message: 'If an account with this email exists, a password reset link has been sent.'
+    });
+  } catch (error: any) {
+    console.error('ForgotPassword error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ success: false, message: 'Token and password are required' });
+    }
+
+    // Password strength check: Min 8 chars, 1 uppercase, 1 lowercase, 1 number
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long, and contain at least one uppercase letter, one lowercase letter, and one number.'
+      });
+    }
+
+    // Hash the token sent in body to compare with the database
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: new Date() }
+    });
+
+    if (!user) {
+      // Audit log failed reset (token invalid/expired)
+      console.log(`[AUDIT] Password reset failed. Timestamp: ${new Date().toISOString()}, IP: ${req.ip}, User ID: N/A, Status: Failed (Invalid or expired token)`);
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired password reset token'
+      });
+    }
+
+    // Hash new password using existing bcrypt mechanism
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    user.passwordHash = passwordHash;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    // Audit log success
+    console.log(`[AUDIT] Password reset completed. Timestamp: ${new Date().toISOString()}, IP: ${req.ip}, User ID: ${user._id}, Status: Success`);
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+  } catch (error: any) {
+    console.error('ResetPassword error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+

@@ -11,7 +11,12 @@ import {
   Bug,
   Loader2,
   Store,
-  Truck
+  Truck,
+  Gavel,
+  Sprout,
+  Wallet,
+  Layers,
+  Landmark
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,9 +36,9 @@ interface Message {
 
 const getAITranslations = (role: 'farmer' | 'buyer') => ({
   en: {
-    title: role === 'farmer' ? 'KrishiSathi AI' : 'AgriSourcing AI',
-    subtitle: 'Powered by Groq',
-    suggestedQueries: 'Suggested Queries',
+    title: role === 'farmer' ? 'KrishiSarthi AI' : 'AgriSourcing AI',
+    subtitle: 'Your intelligent farming assistant for weather, crop prices, auctions, logistics, loans, and farming guidance.',
+    suggestedQueries: 'Quick Actions',
     placeholder: role === 'farmer' 
       ? 'Ask about crop prices, weather, or farming advice...' 
       : 'Ask about crop sourcing, prices, or deliveries...',
@@ -41,20 +46,21 @@ const getAITranslations = (role: 'farmer' | 'buyer') => ({
     welcome: role === 'farmer' 
       ? 'Namaste! I am KrishiSathi, your personal AI farming assistant. How can I help you today?'
       : 'Namaste! I am AgriSourcing AI, your personal assistant for sourcing crops and managing deliveries. How can I help you today?',
-    suggestions: role === 'farmer' ? [
-      { label: 'Check Crop Prices', query: 'I would like to check crop prices.', icon: TrendingUp },
-      { label: 'Weather Forecast', query: 'Will it rain this week?', icon: ThermometerSun },
-      { label: 'Pest Identification', query: 'My leaves have brown spots, what disease is it?', icon: Bug },
-    ] : [
-      { label: 'Source Organic Onions', query: 'Where can I source organic onions in Nashik?', icon: Store },
-      { label: 'Wheat Price Trends', query: 'What are the seasonal price trends for Wheat?', icon: TrendingUp },
-      { label: 'Delivery Process', query: 'How do deliveries get tracked and managed on Agribridge?', icon: Truck },
+    suggestions: [
+      { label: '🌧️ Weather Forecast', query: 'What is the weather forecast for today?', icon: ThermometerSun },
+      { label: '💰 Today\'s Market Prices', query: 'What are the crop market prices today?', icon: TrendingUp },
+      { label: '📈 Live Auctions', query: 'Show me live auctions details.', icon: Gavel },
+      { label: '🚚 Track Delivery', query: 'Where is my active delivery and shipment status?', icon: Truck },
+      { label: '🌱 Crop Advisory', query: 'Can you give me a crop recommendation and agricultural advice?', icon: Sprout },
+      { label: '🐛 Pest Identification', query: 'How do I identify and manage pests in my farm?', icon: Bug },
+      { label: '🏦 Loan Status', query: 'Check my active loan status and eligibility.', icon: Landmark },
+      { label: '📦 My Inventory', query: 'Show my inventory of crops.', icon: Layers },
     ],
   },
   hi: {
     title: role === 'farmer' ? 'कृषिसार्थी AI' : 'कृषि सोर्सिंग AI',
-    subtitle: 'Groq द्वारा संचालित',
-    suggestedQueries: 'सुझाए गए प्रश्न',
+    subtitle: 'मौसम, फसल की कीमतों, नीलामियों, रसद, ऋण और खेती मार्गदर्शन के लिए आपका बुद्धिमान सहायक।',
+    suggestedQueries: 'त्वरित कार्रवाई',
     placeholder: role === 'farmer'
       ? 'फसल की कीमतों, मौसम या खेती की सलाह के बारे में पूछें...'
       : 'फसल सोर्सिंग, कीमतों या डिलीवरी के बारे में पूछें...',
@@ -62,20 +68,21 @@ const getAITranslations = (role: 'farmer' | 'buyer') => ({
     welcome: role === 'farmer'
       ? 'नमस्ते! मैं कृषिसार्थी हूँ, आपका व्यक्तिगत AI खेती सहायक। आज मैं आपकी क्या सहायता कर सकता हूँ?'
       : 'नमस्ते! मैं कृषि सोर्सिंग AI हूँ, आपका व्यक्तिगत सोर्सिंग और डिलीवरी सहायक। आज मैं आपकी क्या सहायता कर सकता हूँ?',
-    suggestions: role === 'farmer' ? [
-      { label: 'फसल की कीमतें देखें', query: 'नासिक में टमाटर की कीमत क्या है?', icon: TrendingUp },
-      { label: 'मौसम का पूर्वानुमान', query: 'क्या इस सप्ताह बारिश होगी?', icon: ThermometerSun },
-      { label: 'कीट की पहचान', query: 'मेरी पत्तियों पर भूरे धब्बे हैं, यह कौन सी बीमारी है?', icon: Bug },
-    ] : [
-      { label: 'ऑर्गेनिक प्याज सोर्स करें', query: 'मैं नासिक में ऑर्गेनिक प्याज कहाँ से खरीद सकता हूँ?', icon: Store },
-      { label: 'गेहूं की कीमत के रुझान', query: 'गेहूं के लिए मौसमी मूल्य रुझान क्या हैं?', icon: TrendingUp },
-      { label: 'वितरण प्रक्रिया', query: 'एग्रीब्रिज पर डिलीवरी को कैसे ट्रैक और प्रबंधित किया जाता है?', icon: Truck },
+    suggestions: [
+      { label: '🌧️ मौसम का पूर्वानुमान', query: 'आज मौसम कैसा रहेगा?', icon: ThermometerSun },
+      { label: '💰 आज के मंडी भाव', query: 'आज फसलों के मंडी भाव क्या हैं?', icon: TrendingUp },
+      { label: '📈 लाइव नीलामी', query: 'मुझे लाइव नीलामी का विवरण दिखाएं।', icon: Gavel },
+      { label: '🚚 डिलीवरी ट्रैक करें', query: 'मेरी डिलीवरी कहाँ है और उसका स्टेटस क्या है?', icon: Truck },
+      { label: '🌱 फसल परामर्श', query: 'क्या आप मुझे कोई फसल सलाह या खेती मार्गदर्शन दे सकते हैं?', icon: Sprout },
+      { label: '🐛 कीट पहचान', query: 'मैं अपने खेत में कीड़ों की पहचान और प्रबंधन कैसे करूँ?', icon: Bug },
+      { label: '🏦 ऋण की स्थिति', query: 'मेरे सक्रिय लोन की स्थिति और पात्रता बताएं।', icon: Landmark },
+      { label: '📦 मेरी सूची (इन्वेंटरी)', query: 'मेरे क्रॉप इन्वेंटरी की सूची दिखाएं।', icon: Layers },
     ],
   },
   mr: {
     title: role === 'farmer' ? 'कृषिसार्थी AI' : 'कृषि सोर्सिंग AI',
-    subtitle: 'Groq द्वारे समर्थित',
-    suggestedQueries: 'सुचवलेले प्रश्न',
+    subtitle: 'हवामान, पिकांच्या किमती, लिलाव, वाहतूक, कर्ज आणि शेती मार्गदर्शनासाठी तुमचे बुद्धिमान सहाय्यक.',
+    suggestedQueries: 'त्वरित कृती',
     placeholder: role === 'farmer'
       ? 'पिकांच्या किमती, हवामान किंवा शेतीच्या सल्ल्याबद्दल विचारा...'
       : 'पिकांचे सोर्सिंग, किमती किंवा वितरणाबद्दल विचारा...',
@@ -83,14 +90,15 @@ const getAITranslations = (role: 'farmer' | 'buyer') => ({
     welcome: role === 'farmer'
       ? 'नमस्ते! मी कृषिसार्थी आहे, तुमचा वैयक्तिक AI शेती सहाय्यक. आज मी तुम्हाला कशी मदत करू शकतो?'
       : 'नमस्ते! मी कृषि सोर्सिंग AI आहे, पिकांची खरेदी आणि वितरण व्यवस्थापित करण्यासाठी तुमचा वैयक्तिक सहाय्यक. आज मी तुम्हाला कशी मदत करू शकतो?',
-    suggestions: role === 'farmer' ? [
-      { label: 'पिकांच्या किमती तपासा', query: 'नाशिकमध्ये टोमॅटोची किंमत काय आहे?', icon: TrendingUp },
-      { label: 'हवामान अंदाज', query: 'या आठवड्यात पाऊस पडेल का?', icon: ThermometerSun },
-      { label: 'कीड ओळखणे', query: 'माझ्या पानांवर तपकिरी ठिपके आहेत, हा कोणता रोग आहे?', icon: Bug },
-    ] : [
-      { label: 'ऑर्गेनिक कांदा खरेदी करा', query: 'मी नाशिकमध्ये सेंद्रिय कांदा कोठून खरेदी करू शकतो?', icon: Store },
-      { label: 'गव्हाच्या किमतींचे कल', query: 'गव्हाच्या किमतींचे हंगामी कल काय आहेत?', icon: TrendingUp },
-      { label: 'वितरण प्रक्रिया', query: 'अॅग्रीब्रिजवर डिलिव्हरी कशी ट्रॅक आणि व्यवस्थापित केली जाते?', icon: Truck },
+    suggestions: [
+      { label: '🌧️ हवामान अंदाज', query: 'आजचे हवामान कसे असेल?', icon: ThermometerSun },
+      { label: '💰 आजचे पिकांचे दर', query: 'आज पिकांचे बाजार भाव काय आहेत?', icon: TrendingUp },
+      { label: '📈 लाइव्ह लिलाव', query: 'मला चालू लिलावाची माहिती दाखवा.', icon: Gavel },
+      { label: '🚚 डिलिव्हरी ट्रॅक करा', query: 'माझी डिलिव्हरी कुठे आहे?', icon: Truck },
+      { label: '🌱 पीक सल्ला', query: 'तुम्ही मला पीक सल्ला किंवा शेती मार्गदर्शन देऊ शकता का?', icon: Sprout },
+      { label: '🐛 कीड ओळखणे', query: 'मी माझ्या शेतातील किडींचे व्यवस्थापन कसे करू?', icon: Bug },
+      { label: '🏦 कर्जाची स्थिती', query: 'माझ्या कर्जाची स्थिती आणि पात्रता तपासा.', icon: Landmark },
+      { label: '📦 माझी इन्व्हेंटरी', query: 'माझ्या पिकांची यादी दाखवा.', icon: Layers },
     ],
   }
 });
@@ -105,6 +113,7 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [loadingText, setLoadingText] = useState('Preparing response...');
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef<any>(null);
@@ -173,6 +182,24 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
 
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
+
+    // Set contextual loading text
+    const lower = text.toLowerCase();
+    if (lower.includes('weather') || lower.includes('rain') || lower.includes('barish') || lower.includes('mausam') || lower.includes('havaman')) {
+      setLoadingText('Checking weather...');
+    } else if (lower.includes('price') || lower.includes('rate') || lower.includes('mandi') || lower.includes('bhav') || lower.includes('bhaav') || lower.includes('market') || lower.includes('gehu') || lower.includes('cotton') || lower.includes('tomato')) {
+      setLoadingText('Fetching market prices...');
+    } else if (lower.includes('auction') || lower.includes('bid') || lower.includes('boli') || lower.includes('live')) {
+      setLoadingText('Loading auction details...');
+    } else if (lower.includes('delivery') || lower.includes('track') || lower.includes('shipment') || lower.includes('status') || lower.includes('transit') || lower.includes('kahan') || lower.includes('kaha')) {
+      setLoadingText('Tracking shipment...');
+    } else if (lower.includes('inventory') || lower.includes('crop') || lower.includes('stock') || lower.includes('fasal')) {
+      setLoadingText('Retrieving inventory...');
+    } else if (lower.includes('loan') || lower.includes('credit') || lower.includes('bank') || lower.includes('karz')) {
+      setLoadingText('Checking loan status...');
+    } else {
+      setLoadingText('Preparing response...');
+    }
 
     const userMsg: Message = { id: Date.now().toString(), sender: 'user', text, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
@@ -336,12 +363,12 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
               <button
                 key={i}
                 onClick={() => handleSend(suggestion.query)}
-                className="flex items-center gap-3 p-4 rounded-xl glass-card border border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+                className="flex items-center gap-3 p-3.5 rounded-xl glass-card border border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all text-left group shadow-sm"
               >
                 <div className="p-2 rounded-lg bg-secondary group-hover:bg-primary/20 text-foreground group-hover:text-primary transition-colors">
-                  <SuggestionIcon className="w-4 h-4" />
+                  <SuggestionIcon className="w-4 h-4 text-primary" />
                 </div>
-                <span className="text-sm font-medium">{suggestion.label}</span>
+                <span className="text-sm font-medium">{suggestion.label.replace(/^[\p{Emoji}\s]+/u, '')}</span>
               </button>
             );
           })}
@@ -391,10 +418,16 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
                 <Avatar className="w-8 h-8 shrink-0 border border-border mt-1">
                   <AvatarFallback className="bg-primary text-white"><Sparkles className="w-4 h-4" /></AvatarFallback>
                 </Avatar>
-                <div className="px-4 py-4 rounded-2xl glass border border-border/50 bg-secondary/50 rounded-tl-sm flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="px-4 py-3 rounded-2xl glass border border-border/50 bg-secondary/50 rounded-tl-sm flex flex-col gap-2 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                    <span className="text-xs text-muted-foreground font-medium animate-pulse">{loadingText}</span>
+                  </div>
+                  <div className="flex items-center gap-1 pl-5">
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -403,8 +436,25 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
           </CardContent>
 
           {/* Input Area */}
-          <div className="p-4 border-t border-border/50 bg-secondary/20 z-10">
-            <div className="flex gap-2 max-w-4xl mx-auto relative">
+          <div className="p-4 border-t border-border/50 bg-secondary/20 z-10 flex flex-col gap-3">
+            {/* Quick Actions Scroll bar for Mobile/Tablet */}
+            <div className="flex lg:hidden overflow-x-auto gap-2 pb-1 no-scrollbar max-w-full">
+              {t.suggestions.map((suggestion: any, i: number) => {
+                const SuggestionIcon = suggestion.icon;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(suggestion.query)}
+                    className="whitespace-nowrap px-3 py-1.5 text-xs font-medium rounded-full bg-background border border-border hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center gap-1.5 shrink-0 shadow-sm"
+                  >
+                    <SuggestionIcon className="w-3.5 h-3.5 text-primary" />
+                    <span>{suggestion.label.replace(/^[\p{Emoji}\s]+/u, '')}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2 max-w-4xl mx-auto relative w-full">
               <Button 
                 variant="outline" 
                 size="icon" 
@@ -420,7 +470,7 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !isListening && handleSend(input)}
                 placeholder={isListening ? (language === 'en' ? 'Listening...' : language === 'hi' ? 'सुन रहा हूँ...' : 'ऐकत आहे...') : t.placeholder}
-                className={`h-12 bg-background border-border/50 rounded-xl pr-12 focus-visible:ring-primary/50 text-base ${isListening ? 'border-destructive/50 text-destructive' : ''}`}
+                className={`h-12 bg-background border-border/50 rounded-xl pr-12 focus-visible:ring-primary/50 text-base w-full ${isListening ? 'border-destructive/50 text-destructive' : ''}`}
                 disabled={isListening}
               />
               
@@ -433,7 +483,7 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
                 <Send className="w-4 h-4" />
               </Button>
             </div>
-            <div className="text-center mt-2 text-xs text-muted-foreground">
+            <div className="text-center text-xs text-muted-foreground">
               {t.warning}
             </div>
           </div>

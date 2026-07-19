@@ -28,6 +28,8 @@ interface Loan {
   createdAt: string;
 }
 
+import { EmptyState } from '@/components/ui/empty-state';
+
 export default function LoansPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,13 +181,13 @@ export default function LoansPage() {
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
       ) : loans.length === 0 ? (
-        <div className="glass-card p-16 text-center rounded-3xl border-border/50">
-          <Landmark className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="text-xl font-heading font-bold mb-2">No Loan Applications</h3>
-          <p className="text-muted-foreground max-w-sm mx-auto">
-            You haven't applied for any micro-loans yet. Build your AgriCredit score and apply here when you need financing.
-          </p>
-        </div>
+        <EmptyState
+          icon={Landmark}
+          title="No Loan Applications"
+          description="You haven't applied for any micro-loans yet. Build your AgriCredit score and apply here when you need financing."
+          ctaText="Apply for Loan"
+          onCtaClick={() => setIsDialogOpen(true)}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence>

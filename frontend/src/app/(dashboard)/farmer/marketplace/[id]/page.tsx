@@ -4,11 +4,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, ShieldCheck, Leaf, Heart, ShoppingBag, Info, Truck } from 'lucide-react';
-<<<<<<< HEAD
 import { CropImage } from '@/components/ui/crop-image';
-=======
-import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
->>>>>>> nidhi/logistics-enhancement
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -147,13 +143,8 @@ export default function CropDetailPage({ params }: { params: Promise<{ id: strin
           {/* Left Column - Image Placeholder */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <div className="relative rounded-3xl overflow-hidden aspect-[4/3] glass-card border border-border/50 bg-muted flex items-center justify-center">
-<<<<<<< HEAD
               <CropImage 
                 images={crop.images} 
-=======
-              <img 
-                src={getValidImageUrl(crop.images?.[0], crop.name)} 
->>>>>>> nidhi/logistics-enhancement
                 alt={crop.name} 
                 className="w-full h-full object-cover" 
               />

@@ -1,9 +1,28 @@
 export function getCropImageUrl(name?: string): string {
-  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none"><rect width="800" height="600" fill="%231E293B"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-size="32" font-weight="bold" fill="%2364748B">No Image Available</text></svg>`;
+  if (!name) return '/images/crops/default_agriculture.jpg';
+  const lower = name.toLowerCase();
+  if (lower.includes('tomato')) return '/images/crops/tomato.jpg';
+  if (lower.includes('wheat')) return '/images/crops/wheat.jpg';
+  if (lower.includes('rice') || lower.includes('chawal')) return '/images/crops/rice.jpg';
+  if (lower.includes('potato') || lower.includes('aloo')) return '/images/crops/potato.jpg';
+  if (lower.includes('onion') || lower.includes('kanda') || lower.includes('pyaaj')) return '/images/crops/onion.jpg';
+  if (lower.includes('bajra')) return '/images/crops/bajra.jpg';
+  if (lower.includes('cotton') || lower.includes('kapas')) return '/images/crops/cotton.jpg';
+  if (lower.includes('maize')) return '/images/crops/maize.jpg';
+  if (lower.includes('soybean')) return '/images/crops/soybean.jpg';
+  if (lower.includes('sugarcane')) return '/images/crops/sugarcane.jpg';
+  return '/images/crops/default_agriculture.jpg';
 }
 
 export function getValidImageUrl(url: string | undefined | null, cropName?: string): string {
   if (!url) return getCropImageUrl(cropName);
-  if (url.startsWith('http') || url.startsWith('data:')) return url;
+  // Support relative paths (starts with /) or absolute paths (http, data:)
+  if (url.startsWith('/') || url.startsWith('http') || url.startsWith('data:')) {
+    // If the URL is a standard non-functional mock placeholder, use our local crop illustrations instead
+    if (url.includes('placehold.co') || url.includes('placeholder')) {
+      return getCropImageUrl(cropName);
+    }
+    return url;
+  }
   return getCropImageUrl(cropName);
 }

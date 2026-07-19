@@ -1,16 +1,8 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import bcrypt from 'bcrypt';
 import dns from 'dns';
 dns.setServers(['8.8.8.8', '8.8.4.4']);
-import { User } from '../src/models/User';
-import { Crop } from '../src/models/Crop';
-import { Auction } from '../src/models/Auction';
-import { Order } from '../src/models/Order';
-import { Delivery } from '../src/models/Delivery';
-import { Notification } from '../src/models/Notification';
-import { Transaction } from '../src/models/Transaction';
-import { Loan } from '../src/models/Loan';
+import { seedDemoData } from '../src/services/seed.service';
 
 dotenv.config();
 
@@ -21,211 +13,19 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-const seedDashboard = async () => {
+const run = async () => {
   try {
     await mongoose.connect(MONGO_URI);
     console.log('Connected to MongoDB');
-
-    // Read demo credentials from env or use fallback defaults
-    const farmerEmail = process.env.DEMO_FARMER_EMAIL || 'demo.farmer@agribridge.com';
-    const farmerPassword = process.env.DEMO_FARMER_PASSWORD || 'Demo@123';
-    const buyerEmail = process.env.DEMO_BUYER_EMAIL || 'demo.buyer@agribridge.com';
-    const buyerPassword = process.env.DEMO_BUYER_PASSWORD || 'Demo@123';
-
-    // Clean up specific seed users based on email
-    console.log('Cleaning up existing seed data...');
-    const seedEmails = [
-      farmerEmail, 
-      buyerEmail, 
-      'logistics_seed@example.com',
-      'farmer_seed@example.com',
-      'buyer_seed@example.com'
-    ];
-    const existingUsers = await User.find({ email: { $in: seedEmails } });
-    const userIds = existingUsers.map(u => u._id);
-
-    await Crop.deleteMany({ farmerId: { $in: userIds } });
-    await Auction.deleteMany({ farmerId: { $in: userIds } });
-    await Order.deleteMany({ farmerId: { $in: userIds } });
-    await Delivery.deleteMany({ orderId: { $in: (await Order.find({ farmerId: { $in: userIds } })).map(o => o._id) } });
-    await Notification.deleteMany({ userId: { $in: userIds } });
-    await Transaction.deleteMany({ $or: [{ payerId: { $in: userIds } }, { payeeId: { $in: userIds } }] });
-    await Loan.deleteMany({ farmerId: { $in: userIds } });
-    await User.deleteMany({ email: { $in: seedEmails } });
-
-    console.log('Inserting fresh seed data...');
-
-    // 1. Create Users
-    const farmerPasswordHash = await bcrypt.hash(farmerPassword, 10);
-    const buyerPasswordHash = await bcrypt.hash(buyerPassword, 10);
-    const logisticsPasswordHash = await bcrypt.hash('password123', 10);
-
-    const farmer = await User.create({
-      name: 'Ramesh Kumar',
-      email: farmerEmail,
-      phone: '1234500001',
-      passwordHash: farmerPasswordHash,
-      role: 'farmer',
-      location: {
-        type: 'Point',
-        coordinates: [73.8567, 18.5204],
-        address: 'Farm Plot 42',
-        city: 'Pune',
-        state: 'Maharashtra',
-        zipCode: '411001'
-      },
-      trustScore: 850,
-      creditScore: 780,
-      walletBalance: 125000,
-      isDemoAccount: true
-    });
-
-    const buyer = await User.create({
-      name: 'FreshMart Ltd',
-      email: buyerEmail,
-      phone: '1234500002',
-      passwordHash: buyerPasswordHash,
-      role: 'buyer',
-      isDemoAccount: true
-    });
-
-    const logistics = await User.create({
-      name: 'AgriTrans',
-      email: 'logistics_seed@example.com',
-      phone: '1234500003',
-      passwordHash: logisticsPasswordHash,
-      role: 'logistics',
-      isDemoAccount: true
-    });
-
-    // 2. Create Crops (20 crops: 15 available, 5 low stock)
-    const crops = [];
-    const cropNames = ['Tomato', 'Onion', 'Potato', 'Wheat', 'Rice', 'Soybean', 'Cotton', 'Sugarcane', 'Maize', 'Bajra'];
-    
-    // Taxonomy metadata maps crop names to correct categories, units, and local images
-    const cropMetadata: { [key: string]: { category: string; unit: string; imageUrl: string } } = {
-      'Tomato': { category: 'Vegetables', unit: 'kg', imageUrl: '/images/crops/tomato.jpg' },
-      'Onion': { category: 'Vegetables', unit: 'kg', imageUrl: '/images/crops/onion.jpg' },
-      'Potato': { category: 'Vegetables', unit: 'kg', imageUrl: '/images/crops/potato.jpg' },
-      'Wheat': { category: 'Grains', unit: 'quintal', imageUrl: '/images/crops/wheat.jpg' },
-      'Rice': { category: 'Grains', unit: 'quintal', imageUrl: '/images/crops/rice.jpg' },
-      'Soybean': { category: 'Pulses/Oilseeds', unit: 'quintal', imageUrl: '/images/crops/soybean.jpg' },
-      'Cotton': { category: 'Fiber', unit: 'ton', imageUrl: '/images/crops/cotton.jpg' },
-      'Sugarcane': { category: 'Cash Crop', unit: 'ton', imageUrl: '/images/crops/sugarcane.jpg' },
-      'Maize': { category: 'Grains', unit: 'quintal', imageUrl: '/images/crops/maize.jpg' },
-      'Bajra': { category: 'Grains', unit: 'quintal', imageUrl: '/images/crops/bajra.jpg' },
-    };
-
-    for (let i = 0; i < 20; i++) {
-      const currentName = cropNames[i % cropNames.length];
-      const meta = cropMetadata[currentName];
-      crops.push({
-        farmerId: farmer._id,
-        name: currentName + (i > 9 ? ' (Premium)' : ''),
-        description: 'Freshly harvested organic produce.',
-        category: meta.category,
-        pricePerUnit: 1500 + Math.floor(Math.random() * 5000), // per unit
-        quantity: i < 5 ? (10 + Math.floor(Math.random() * 40)) : (200 + Math.floor(Math.random() * 800)), // First 5 are low stock (< 50)
-        unit: meta.unit,
-        isOrganic: i % 3 === 0,
-        images: [meta.imageUrl],
-        status: 'listed',
-        location: farmer.location
-      });
-    }
-    const insertedCrops = await Crop.insertMany(crops);
-
-    // 3. Create Auctions (5 active)
-    const auctions = [];
-    for (let i = 0; i < 5; i++) {
-      auctions.push({
-        cropId: insertedCrops[i]._id,
-        farmerId: farmer._id,
-        startingBid: insertedCrops[i].pricePerUnit,
-        currentHighestBid: insertedCrops[i].pricePerUnit + 500,
-        startTime: new Date(Date.now() - 3600000), // 1 hour ago
-        endTime: new Date(Date.now() + 86400000), // 24 hours from now
-        status: 'live',
-        quantity: Math.floor(insertedCrops[i].quantity / 2) || 10,
-        minIncrement: 100,
-        bids: [{ bidderId: buyer._id, amount: insertedCrops[i].pricePerUnit + 500, timestamp: new Date() }]
-      });
-    }
-    await Auction.insertMany(auctions);
-
-    // 4. Create Orders (10 orders: 8 completed, 2 pending)
-    const orders = [];
-    let totalRevenue = 0;
-    for (let i = 0; i < 10; i++) {
-      const amount = insertedCrops[i + 5].pricePerUnit * 2;
-      if (i < 8) totalRevenue += amount;
-      
-      orders.push({
-        buyerId: buyer._id,
-        farmerId: farmer._id,
-        cropId: insertedCrops[i + 5]._id,
-        quantity: 2,
-        totalAmount: amount,
-        paymentStatus: i < 8 ? 'completed' : 'pending',
-        deliveryStatus: i < 8 ? 'delivered' : 'pending',
-        createdAt: new Date(Date.now() - Math.random() * 2592000000) // Within last 30 days
-      });
-    }
-    const insertedOrders = await Order.insertMany(orders);
-
-    // 5. Create Deliveries (6 deliveries for the completed orders)
-    const deliveries = [];
-    const statuses = ['pending', 'packed', 'in_transit', 'delivered', 'delivered', 'delivered'];
-    for (let i = 0; i < 6; i++) {
-      deliveries.push({
-        orderId: insertedOrders[i]._id,
-        logisticsPartnerId: logistics._id,
-        pickupLocation: farmer.location,
-        dropLocation: { type: 'Point', coordinates: [72.8777, 19.0760] },
-        status: statuses[i]
-      });
-    }
-    await Delivery.insertMany(deliveries);
-
-    // 6. Create Notifications (15 notifications)
-    const notifications = [];
-    for (let i = 0; i < 15; i++) {
-      notifications.push({
-        userId: farmer._id,
-        type: ['order', 'auction', 'payment', 'system'][i % 4],
-        title: ['New Order Received', 'Bid Placed', 'Payment Credited', 'Weather Alert'][i % 4],
-        message: 'This is a sample notification message for the dashboard.',
-        isRead: i > 5, // First 5 are unread
-        channel: 'in_app',
-        createdAt: new Date(Date.now() - Math.random() * 86400000) // Last 24 hours
-      });
-    }
-    await Notification.insertMany(notifications);
-
-    // 7. Create Transactions (Recent Activity)
-    const transactions = [];
-    for (let i = 0; i < 8; i++) {
-      transactions.push({
-        orderId: insertedOrders[i]._id,
-        payerId: buyer._id,
-        payeeId: farmer._id,
-        amount: insertedOrders[i].totalAmount,
-        mode: 'bank',
-        status: 'success',
-        timestamp: insertedOrders[i].createdAt
-      });
-    }
-    await Transaction.insertMany(transactions);
-
+    await seedDemoData();
     console.log('Seed completed successfully!');
-    console.log(`Test Farmer Email: ${farmer.email} | Password: ${farmerPassword}`);
-    console.log(`Test Buyer Email: ${buyer.email} | Password: ${buyerPassword}`);
-
-    mongoose.disconnect();
   } catch (error) {
     console.error('Seed failed:', error);
     process.exit(1);
+  } finally {
+    await mongoose.disconnect();
+    console.log('Disconnected from MongoDB.');
   }
 };
 
-seedDashboard();
+run();

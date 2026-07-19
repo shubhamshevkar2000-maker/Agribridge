@@ -21,6 +21,8 @@ export interface IDelivery extends Document {
   estimatedFuelCost?: number;
   earnings?: number;
   proofOfDeliveryImage?: string;
+  isOutForDelivery?: boolean;
+  isDemoAccount?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +55,8 @@ const deliverySchema = new Schema<IDelivery>(
     estimatedFuelCost: { type: Number },
     earnings: { type: Number },
     proofOfDeliveryImage: { type: String },
+    isOutForDelivery: { type: Boolean, default: false },
+    isDemoAccount: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

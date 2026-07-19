@@ -8,11 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-<<<<<<< HEAD
 import { CropImage } from '@/components/ui/crop-image';
-=======
-import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
->>>>>>> nidhi/logistics-enhancement
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface Crop {
   _id: string;
@@ -43,6 +41,8 @@ export default function InventoryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [editingCropId, setEditingCropId] = useState<string | null>(null);
+  const [deleteCropId, setDeleteCropId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Profile default location prefill
   const [profileLocation, setProfileLocation] = useState<any>(null);
@@ -256,12 +256,12 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this crop?')) return;
-    
+  const confirmDelete = async () => {
+    if (!deleteCropId) return;
+    setIsDeleting(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/crops/${id}`, {
+      const res = await fetch(`/api/crops/${deleteCropId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -271,11 +271,15 @@ export default function InventoryPage() {
       if (!data.success) {
         alert(data.message || 'Failed to delete crop');
       } else {
+        setDeleteCropId(null);
         fetchCrops();
         mutate('/api/dashboard/farmer');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Delete failed', err);
+      alert(err.message || 'Delete failed');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -549,15 +553,14 @@ export default function InventoryPage() {
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : crops.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center">
-              <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
-                <Package className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">No crops added.</h3>
-              <p className="text-muted-foreground max-w-sm mb-6">
-                You haven't added any crops to your inventory yet. Add your harvest to get started.
-              </p>
-              <Button onClick={() => setIsFormOpen(true)}>Add Your First Crop</Button>
+            <div className="py-6">
+              <EmptyState
+                icon={Package}
+                title="No crops added."
+                description="You haven't added any crops to your inventory yet. Add your harvest to get started."
+                ctaText="Add Your First Crop"
+                onCtaClick={() => setIsFormOpen(true)}
+              />
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -577,7 +580,6 @@ export default function InventoryPage() {
                     <tr key={crop._id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
                       <td className="px-6 py-4 font-medium text-foreground">
                         <div className="flex items-center gap-3">
-<<<<<<< HEAD
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0 border border-border/30">
                             <CropImage 
                               images={crop.images} 
@@ -585,14 +587,6 @@ export default function InventoryPage() {
                               className="w-full h-full object-cover" 
                             />
                           </div>
-=======
-                          <img 
-                            src={getValidImageUrl(crop.images?.[0], crop.name)} 
-                            alt={crop.name} 
-                            className="w-10 h-10 object-cover rounded-lg bg-muted shrink-0 border border-border/30" 
-                            loading="lazy" 
-                          />
->>>>>>> nidhi/logistics-enhancement
                           <div className="flex flex-col">
                             <span className="flex items-center gap-2">
                               {crop.name}
@@ -659,7 +653,7 @@ export default function InventoryPage() {
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                onClick={() => handleDelete(crop._id)}
+                                onClick={() => setDeleteCropId(crop._id)}
                                 className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -680,6 +674,42 @@ export default function InventoryPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteCropId} onOpenChange={(open) => { if (!open) setDeleteCropId(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Crop Listing</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this crop from your inventory? This action cannot be undone and will remove it from the marketplace.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex sm:justify-end gap-2 mt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setDeleteCropId(null)} 
+              disabled={isDeleting}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              variant="destructive" 
+              onClick={confirmDelete} 
+              disabled={isDeleting}
+              className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Deleting...
+                </>
+              ) : 'Delete Crop'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

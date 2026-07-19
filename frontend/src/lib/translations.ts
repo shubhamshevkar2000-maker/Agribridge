@@ -55,8 +55,8 @@ const translations = {
     feature4Desc: 'Build a trustworthy credit profile based on your transaction history to access institutional loans.',
     feature5Title: 'Direct Marketplace',
     feature5Desc: 'A nationwide platform connecting farmers and bulk buyers securely and transparently.',
-    feature6Title: 'Multilingual Voice AI',
-    feature6Desc: 'Interact with the platform using simple voice commands in English, Hindi, and Marathi.',
+    feature6Title: 'Order & Logistics Tracking',
+    feature6Desc: 'Track order lifecycle, pickup scheduling, shipment progress, and delivery status in one place.',
 
     // How It Works
     howBadge: 'Simple & Secure',
@@ -201,8 +201,8 @@ const translations = {
     feature4Desc: 'संस्थागत ऋन तक पहुंचने के लिए अपने लेनदेन इतिहास के आधार पर एक विश्वसनीय क्रेडिट प्रोफ़ाइल बनाएं।',
     feature5Title: 'प्रत्यक्ष बाज़ार',
     feature5Desc: 'किसानों और थोक खरीदारों को सुरक्षित और पारदर्शी रूप से जोड़ने वाला एक राष्ट्रव्यापी मंच।',
-    feature6Title: 'बहुभाषी वॉइस AI',
-    feature6Desc: 'अंग्रेजी, हिंदी और मराठी में सरल आवाज कमांड का उपयोग करके प्लेटफ़ॉर्म के साथ बातचीत करें।',
+    feature6Title: 'ऑर्डर और लॉजिस्टिक्स ट्रैकिंग',
+    feature6Desc: 'एक ही स्थान पर ऑर्डर जीवनचक्र, पिकअप शेड्यूलिंग, शिपमेंट प्रगति और डिलीवरी स्थिति को ट्रैक करें।',
 
     // How It Works
     howBadge: 'सरल और सुरक्षित',
@@ -347,8 +347,8 @@ const translations = {
     feature4Desc: 'संस्थागत कर्ज मिळवण्यासाठी तुमच्या व्यवहार इतिहासावर आधारित विश्वासार्ह क्रेडिट प्रोफाइल तयार करा.',
     feature5Title: 'थेट बाजार',
     feature5Desc: 'शेतकरी आणि थोक खरेदीदारांना सुरक्षित आणि पारदर्शकपणे जोडणारे एक राष्ट्रव्यापी व्यासपीठ.',
-    feature6Title: 'बहुभाषी व्हॉइस AI',
-    feature6Desc: 'इंग्रजी, हिंदी आणि मराठीत सोप्या आवाज आदेशांचा वापर करून व्यासपीठाशी संवाद साधा.',
+    feature6Title: 'ऑर्डर आणि लॉजिस्टिक्स ट्रॅकिंग',
+    feature6Desc: 'ऑर्डरचे जीवनचक्र, पिकअप शेड्यूलिंग, शिपमेंटची प्रगती आणि वितरण स्थिती एकाच ठिकाणी ट्रॅक करा.',
 
     // How It Works
     howBadge: 'सोपे आणि सुरक्षित',

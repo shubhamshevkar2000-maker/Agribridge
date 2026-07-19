@@ -7,6 +7,7 @@ export interface INotification extends Document {
   message: string;
   isRead: boolean;
   channel: 'push' | 'sms' | 'email' | 'in_app';
+  isDemoAccount?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +24,7 @@ const notificationSchema = new Schema<INotification>(
       enum: ['push', 'sms', 'email', 'in_app'],
       default: 'in_app',
     },
+    isDemoAccount: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

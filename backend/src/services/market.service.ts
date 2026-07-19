@@ -102,15 +102,12 @@ export const fetchMarketPrices = async (prompt: string, defaultLocation?: string
   await new Promise(r => setTimeout(r, 800));
 
   const baseWholesale = basePrices[crop];
+  const currentWholesale = baseWholesale; // Stable, no random variation
   
-  // Add some randomness based on the location (mock variance -5% to +15%)
-  const locationModifier = 1 + (Math.random() * 0.2 - 0.05);
-  const currentWholesale = Math.round(baseWholesale * locationModifier);
-  
-  // Retail markups are typically 40% to 100% higher than wholesale due to logistics, storage, and platform margins.
-  const blinkitPrice = Math.round(currentWholesale * (1.6 + Math.random() * 0.2));
-  const zeptoPrice = Math.round(currentWholesale * (1.55 + Math.random() * 0.2));
-  const bigbasketPrice = Math.round(currentWholesale * (1.5 + Math.random() * 0.15));
+  // Stable retail markup factors
+  const blinkitPrice = Math.round(currentWholesale * 1.6);
+  const zeptoPrice = Math.round(currentWholesale * 1.55);
+  const bigbasketPrice = Math.round(currentWholesale * 1.5);
 
   const sources: PriceSource[] = [
     { name: 'Blinkit', price: blinkitPrice, unit: 'kg', location },
