@@ -101,30 +101,34 @@ const seedDashboard = async () => {
     // 2. Create Crops (20 crops: 15 available, 5 low stock)
     const crops = [];
     const cropNames = ['Tomato', 'Onion', 'Potato', 'Wheat', 'Rice', 'Soybean', 'Cotton', 'Sugarcane', 'Maize', 'Bajra'];
-    const cropImages: { [key: string]: string } = {
-      'Tomato': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=800&q=80',
-      'Onion': 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?auto=format&fit=crop&w=800&q=80',
-      'Potato': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=800&q=80',
-      'Wheat': 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=800&q=80',
-      'Rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=800&q=80',
-      'Soybean': 'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=800&q=80',
-      'Cotton': 'https://images.unsplash.com/photo-1598514982205-f36b96d1e8d4?auto=format&fit=crop&w=800&q=80',
-      'Sugarcane': 'https://images.unsplash.com/photo-1593113630400-ea4288922497?auto=format&fit=crop&w=800&q=80',
-      'Maize': 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=800&q=80',
-      'Bajra': 'https://images.unsplash.com/photo-1606757389105-64e8e4f1a16b?auto=format&fit=crop&w=800&q=80',
+    
+    // Taxonomy metadata maps crop names to correct categories, units, and local images
+    const cropMetadata: { [key: string]: { category: string; unit: string; imageUrl: string } } = {
+      'Tomato': { category: 'Vegetables', unit: 'kg', imageUrl: '/images/crops/tomato.jpg' },
+      'Onion': { category: 'Vegetables', unit: 'kg', imageUrl: '/images/crops/onion.jpg' },
+      'Potato': { category: 'Vegetables', unit: 'kg', imageUrl: '/images/crops/potato.jpg' },
+      'Wheat': { category: 'Grains', unit: 'quintal', imageUrl: '/images/crops/wheat.jpg' },
+      'Rice': { category: 'Grains', unit: 'quintal', imageUrl: '/images/crops/rice.jpg' },
+      'Soybean': { category: 'Pulses/Oilseeds', unit: 'quintal', imageUrl: '/images/crops/soybean.jpg' },
+      'Cotton': { category: 'Fiber', unit: 'ton', imageUrl: '/images/crops/cotton.jpg' },
+      'Sugarcane': { category: 'Cash Crop', unit: 'ton', imageUrl: '/images/crops/sugarcane.jpg' },
+      'Maize': { category: 'Grains', unit: 'quintal', imageUrl: '/images/crops/maize.jpg' },
+      'Bajra': { category: 'Grains', unit: 'quintal', imageUrl: '/images/crops/bajra.jpg' },
     };
+
     for (let i = 0; i < 20; i++) {
       const currentName = cropNames[i % cropNames.length];
+      const meta = cropMetadata[currentName];
       crops.push({
         farmerId: farmer._id,
         name: currentName + (i > 9 ? ' (Premium)' : ''),
         description: 'Freshly harvested organic produce.',
-        category: i % 2 === 0 ? 'Vegetables' : 'Grains',
+        category: meta.category,
         pricePerUnit: 1500 + Math.floor(Math.random() * 5000), // per unit
         quantity: i < 5 ? (10 + Math.floor(Math.random() * 40)) : (200 + Math.floor(Math.random() * 800)), // First 5 are low stock (< 50)
-        unit: 'quintal',
+        unit: meta.unit,
         isOrganic: i % 3 === 0,
-        images: [cropImages[currentName]],
+        images: [meta.imageUrl],
         status: 'listed',
         location: farmer.location
       });
@@ -171,7 +175,7 @@ const seedDashboard = async () => {
 
     // 5. Create Deliveries (6 deliveries for the completed orders)
     const deliveries = [];
-    const statuses = ['unassigned', 'picked_up', 'in_transit', 'delivered', 'delivered', 'delivered'];
+    const statuses = ['pending', 'packed', 'in_transit', 'delivered', 'delivered', 'delivered'];
     for (let i = 0; i < 6; i++) {
       deliveries.push({
         orderId: insertedOrders[i]._id,

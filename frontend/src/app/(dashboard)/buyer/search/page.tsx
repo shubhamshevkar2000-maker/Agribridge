@@ -152,6 +152,9 @@ export default function BuyerSearchPage() {
                   <option value="Fruits">Fruits</option>
                   <option value="Grains">Grains</option>
                   <option value="Spices">Spices</option>
+                  <option value="Fiber">Fiber</option>
+                  <option value="Pulses/Oilseeds">Pulses/Oilseeds</option>
+                  <option value="Cash Crop">Cash Crop</option>
                 </select>
               </div>
 

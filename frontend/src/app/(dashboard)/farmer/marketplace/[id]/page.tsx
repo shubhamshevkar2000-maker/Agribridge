@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, ShieldCheck, Leaf, Heart, ShoppingBag, Info, Truck } from 'lucide-react';
-import { getCropImageUrl } from '@/utils/cropImages';
+import { CropImage } from '@/components/ui/crop-image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -143,11 +143,10 @@ export default function CropDetailPage({ params }: { params: Promise<{ id: strin
           {/* Left Column - Image Placeholder */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <div className="relative rounded-3xl overflow-hidden aspect-[4/3] glass-card border border-border/50 bg-muted flex items-center justify-center">
-              <img 
-                src={(crop.images && crop.images.length > 0 && !crop.images[0].includes('placehold.co')) ? crop.images[0] : getCropImageUrl(crop.name)} 
+              <CropImage 
+                images={crop.images} 
                 alt={crop.name} 
                 className="w-full h-full object-cover" 
-                loading="lazy" 
               />
               <div className="absolute top-4 left-4 flex gap-2">
                 {crop.isOrganic && <Badge className="bg-primary shadow-lg backdrop-blur-md px-3 py-1 text-sm"><Leaf className="w-3 h-3 mr-1" /> Organic</Badge>}

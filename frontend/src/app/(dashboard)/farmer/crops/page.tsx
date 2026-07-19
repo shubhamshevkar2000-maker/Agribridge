@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
-import { getCropImageUrl } from '@/utils/cropImages';
+import { CropImage } from '@/components/ui/crop-image';
 
 interface Crop {
   _id: string;
@@ -348,11 +348,10 @@ export default function MyCropsPage() {
               <Card className="glass-card border-border/50 rounded-2xl hover:border-primary/30 transition-all group overflow-hidden flex flex-col h-full">
                 {/* Crop Image container */}
                 <div className="relative h-48 overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                  <img 
-                    src={crop.images?.[0] || getCropImageUrl(crop.name)} 
+                  <CropImage 
+                    images={crop.images} 
                     alt={crop.name} 
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                    loading="lazy" 
                   />
                   {crop.isOrganic && (
                     <div className="absolute top-3 left-3">
@@ -460,231 +459,268 @@ export default function MyCropsPage() {
       {/* Modal overlays */}
       <AnimatePresence>
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop overlay */}
+            <div 
+              className="fixed inset-0 transition-opacity" 
+              style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+              onClick={() => { setIsAddModalOpen(false); setEditingCrop(null); }}
+            />
+            
+            {/* Modal Content */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-background border border-border/50 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl glass-card relative p-6 space-y-6"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="bg-white border border-border/50 rounded-2xl w-full max-h-[85vh] shadow-2xl relative flex flex-col overflow-hidden z-10 mx-auto"
+              style={{ 
+                maxWidth: '880px', 
+                boxShadow: '0 20px 60px rgba(0,0,0,0.18)', 
+                borderRadius: '16px',
+                backgroundColor: '#FFFFFF',
+                opacity: 1
+              }}
             >
-              <div className="flex justify-between items-center border-b border-border/30 pb-4">
+              {/* Modal Header */}
+              <div className="flex justify-between items-center border-b border-border/30 px-6 py-5 shrink-0 bg-white relative">
                 <div>
                   <h2 className="text-2xl font-heading font-bold text-foreground">
                     {editingCrop ? 'Edit Crop Details' : 'Add New Crop'}
                   </h2>
-                  <p className="text-sm text-muted-foreground">
-                    {editingCrop ? 'Update your harvest information.' : 'Fill in the details to add a crop to inventory.'}
-                  </p>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   onClick={() => { setIsAddModalOpen(false); setEditingCrop(null); }}
-                  className="rounded-full h-8 w-8"
+                  className="rounded-full h-8 w-8 hover:bg-secondary absolute right-6 top-5"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
 
-              <form onSubmit={(e) => handleFormSubmit(e)} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Crop Name *</label>
-                    <Input 
-                      required 
-                      placeholder="e.g., Basmati Rice" 
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Category *</label>
-                    <select 
-                      className="w-full h-10 px-3 py-2 rounded-xl border border-input bg-background text-sm text-foreground focus:ring-2 focus:ring-primary/20 outline-none"
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    >
-                      <option>Vegetables</option>
-                      <option>Fruits</option>
-                      <option>Grains</option>
-                      <option>Spices</option>
-                      <option>Other</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Variety (Optional)</label>
-                    <Input 
-                      placeholder="e.g., Pusa 1121" 
-                      value={formData.variety}
-                      onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Quantity *</label>
-                    <div className="flex gap-2">
+              {/* Form Content */}
+              <form onSubmit={(e) => handleFormSubmit(e)} className="flex-1 flex flex-col min-h-0 bg-white">
+                <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground block">Crop Name *</label>
+                      <Input 
+                        required 
+                        placeholder="e.g., Basmati Rice" 
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="h-12 rounded-xl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground block">Category *</label>
+                      <select 
+                        className="w-full h-12 px-3 py-2 rounded-xl border border-input bg-background text-sm text-foreground focus:ring-2 focus:ring-primary/20 outline-none"
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      >
+                        <option>Vegetables</option>
+                        <option>Fruits</option>
+                        <option>Grains</option>
+                        <option>Spices</option>
+                        <option>Fiber</option>
+                        <option>Pulses/Oilseeds</option>
+                        <option>Cash Crop</option>
+                        <option>Other</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground block">Variety (Optional)</label>
+                      <Input 
+                        placeholder="e.g., Pusa 1121" 
+                        value={formData.variety}
+                        onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
+                        className="h-12 rounded-xl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground block">Quantity *</label>
+                      <div className="flex gap-2">
+                        <Input 
+                          required 
+                          type="number" 
+                          min="0.01" 
+                          step="any"
+                          placeholder="e.g., 50" 
+                          className="flex-1 h-12 rounded-xl"
+                          value={formData.quantity}
+                          onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                        />
+                        <select 
+                          className="w-28 h-12 px-3 py-2 rounded-xl border border-input bg-background text-sm text-foreground outline-none"
+                          value={formData.unit}
+                          onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                        >
+                          <option value="kg">kg</option>
+                          <option value="quintal">quintal</option>
+                          <option value="ton">ton</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground block">Price per Unit (₹) *</label>
                       <Input 
                         required 
                         type="number" 
                         min="0.01" 
                         step="any"
-                        placeholder="e.g., 50" 
-                        className="flex-1"
-                        value={formData.quantity}
-                        onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                        placeholder="e.g., 85" 
+                        value={formData.pricePerUnit}
+                        onChange={(e) => setFormData({ ...formData, pricePerUnit: e.target.value })}
+                        className="h-12 rounded-xl"
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground block">Harvest Date (Optional)</label>
+                      <Input 
+                        type="date" 
+                        value={formData.harvestDate}
+                        onChange={(e) => setFormData({ ...formData, harvestDate: e.target.value })}
+                        className="h-12 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground block">Description (Optional)</label>
+                    <textarea 
+                      placeholder="Provide details about quality, texture, production methods..." 
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={4}
+                      className="flex min-h-[120px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/20 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground block">
+                      Crop Image {editingCrop ? '(Optional to replace)' : '*'}
+                    </label>
+                    <div className="flex flex-row gap-4 items-center border border-dashed border-border rounded-xl p-4 bg-secondary/5">
+                      {imagePreview && (
+                        <div 
+                          className="rounded-lg overflow-hidden shrink-0 border bg-muted"
+                          style={{ width: '80px', height: '80px' }}
+                        >
+                          <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div className="flex-1 w-full space-y-1.5">
+                        <Input 
+                          type="file" 
+                          accept="image/jpeg,image/png,image/webp" 
+                          required={!editingCrop}
+                          onChange={handleFileChange}
+                          className="bg-background h-12 rounded-xl flex items-center"
+                        />
+                        <p className="text-xs text-muted-foreground">Supported types: JPEG, PNG, WebP. Max size: 5 MB.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Location editable sub-form */}
+                  <div className="border-t border-border/30 pt-6 space-y-4">
+                    <h3 className="text-sm font-bold text-foreground">Location Details (Autofilled but editable)</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="space-y-1 sm:col-span-2 lg:col-span-3">
+                        <label className="text-xs text-muted-foreground font-semibold">Street Address</label>
+                        <Input 
+                          placeholder="Street or Farm address" 
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          className="h-12 rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground font-semibold">City</label>
+                        <Input 
+                          placeholder="City" 
+                          value={formData.city}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                          className="h-12 rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground font-semibold">District</label>
+                        <Input 
+                          placeholder="District" 
+                          value={formData.district}
+                          onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                          className="h-12 rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground font-semibold">State</label>
+                        <Input 
+                          placeholder="State" 
+                          value={formData.state}
+                          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                          className="h-12 rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground font-semibold">Zip / Pin Code</label>
+                        <Input 
+                          placeholder="Pin code" 
+                          value={formData.zipCode}
+                          onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                          className="h-12 rounded-xl"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Options */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-border/30 pt-6">
+                    <div className="flex items-center gap-2.5 h-12">
+                      <input 
+                        type="checkbox" 
+                        id="isOrganic"
+                        className="w-5 h-5 text-primary rounded-lg border-border focus:ring-primary cursor-pointer"
+                        checked={formData.isOrganic}
+                        onChange={(e) => setFormData({ ...formData, isOrganic: e.target.checked })}
+                      />
+                      <label htmlFor="isOrganic" className="text-sm font-semibold text-foreground cursor-pointer select-none">
+                        Certified Organic Harvest
+                      </label>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground font-semibold">Publish to Marketplace Immediately?</label>
                       <select 
-                        className="w-28 h-10 px-3 py-2 rounded-xl border border-input bg-background text-sm text-foreground outline-none"
-                        value={formData.unit}
-                        onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                        className="w-full h-12 px-3 py-2 rounded-xl border border-input bg-background text-sm text-foreground outline-none"
+                        value={formData.publish}
+                        onChange={(e) => setFormData({ ...formData, publish: e.target.value })}
                       >
-                        <option value="kg">kg</option>
-                        <option value="quintal">quintal</option>
-                        <option value="ton">ton</option>
+                        <option value="No">No (Keep as Draft)</option>
+                        <option value="Yes">Yes (Publish Immediately)</option>
                       </select>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Price per Unit (₹) *</label>
-                    <Input 
-                      required 
-                      type="number" 
-                      min="0.01" 
-                      step="any"
-                      placeholder="e.g., 85" 
-                      value={formData.pricePerUnit}
-                      onChange={(e) => setFormData({ ...formData, pricePerUnit: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Harvest Date (Optional)</label>
-                    <Input 
-                      type="date" 
-                      value={formData.harvestDate}
-                      onChange={(e) => setFormData({ ...formData, harvestDate: e.target.value })}
-                    />
-                  </div>
+
+                  {error && <p className="text-sm text-destructive font-bold">{error}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Description (Optional)</label>
-                  <textarea 
-                    placeholder="Provide details about quality, texture, production methods..." 
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/20 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">
-                    Crop Image {editingCrop ? '(Optional to replace)' : '*'}
-                  </label>
-                  <div className="flex flex-col sm:flex-row gap-4 items-center border border-dashed border-border/80 rounded-2xl p-4 bg-secondary/10">
-                    {imagePreview && (
-                      <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 border bg-muted">
-                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <div className="flex-1 w-full space-y-1">
-                      <Input 
-                        type="file" 
-                        accept="image/jpeg,image/png,image/webp" 
-                        required={!editingCrop}
-                        onChange={handleFileChange}
-                        className="bg-background"
-                      />
-                      <p className="text-xs text-muted-foreground">Supported types: JPEG, PNG, WebP. Max size: 5 MB.</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Location editable sub-form */}
-                <div className="border-t border-border/30 pt-4 space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">Location Details (Autofilled but editable)</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <div className="space-y-1 sm:col-span-2 lg:col-span-3">
-                      <label className="text-xs text-muted-foreground">Street Address</label>
-                      <Input 
-                        placeholder="Street or Farm address" 
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">City</label>
-                      <Input 
-                        placeholder="City" 
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">District</label>
-                      <Input 
-                        placeholder="District" 
-                        value={formData.district}
-                        onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">State</label>
-                      <Input 
-                        placeholder="State" 
-                        value={formData.state}
-                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Zip / Pin Code</label>
-                      <Input 
-                        placeholder="Pin code" 
-                        value={formData.zipCode}
-                        onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Options */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border/30 pt-4">
-                  <div className="flex items-center gap-2.5 h-10">
-                    <input 
-                      type="checkbox" 
-                      id="isOrganic"
-                      className="w-4.5 h-4.5 text-primary rounded-lg border-border focus:ring-primary cursor-pointer"
-                      checked={formData.isOrganic}
-                      onChange={(e) => setFormData({ ...formData, isOrganic: e.target.checked })}
-                    />
-                    <label htmlFor="isOrganic" className="text-sm font-medium text-foreground cursor-pointer select-none">
-                      Certified Organic Harvest
-                    </label>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground font-medium">Publish to Marketplace Immediately?</label>
-                    <select 
-                      className="w-full h-10 px-3 py-2 rounded-xl border border-input bg-background text-sm text-foreground outline-none"
-                      value={formData.publish}
-                      onChange={(e) => setFormData({ ...formData, publish: e.target.value })}
-                    >
-                      <option value="No">No (Keep as Draft)</option>
-                      <option value="Yes">Yes (Publish Immediately)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {error && <p className="text-sm text-destructive font-medium">{error}</p>}
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-border/30">
+                {/* Sticky Footer */}
+                <div className="flex justify-end gap-3 px-6 py-4 border-t border-border/30 bg-white shrink-0 sticky bottom-0 z-20">
                   <Button 
                     type="button" 
                     variant="ghost" 
                     onClick={() => { setIsAddModalOpen(false); setEditingCrop(null); }}
-                    className="rounded-xl"
+                    className="rounded-xl h-12 px-6"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/95 text-white px-6 rounded-xl gap-2">
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 rounded-xl gap-2 h-12 font-semibold"
+                  >
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" /> Saving...

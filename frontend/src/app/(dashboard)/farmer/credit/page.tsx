@@ -9,26 +9,32 @@ import { Progress } from '@/components/ui/progress';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import Link from 'next/link';
 
+import { api } from '@/lib/api';
+
 export default function CreditPage() {
   const [ledger, setLedger] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
+
+  const fetchCredit = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.get(`/api/credit/score`);
+      if (data.success) {
+        setLedger(data.data);
+      } else {
+        setError(new Error('Failed to load credit profile'));
+      }
+    } catch (err) {
+      console.error('Failed to fetch credit score', err);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCredit = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`/api/credit/score`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success) {
-          setLedger(data.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch credit score', err);
-      }
-      setLoading(false);
-    };
     fetchCredit();
   }, []);
 
@@ -36,8 +42,14 @@ export default function CreditPage() {
     return <div className="flex justify-center items-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>;
   }
 
-  if (!ledger) {
-    return <div className="text-center p-8 text-destructive">Failed to load credit profile.</div>;
+  if (error || !ledger) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-center">
+        <h2 className="text-2xl font-bold text-destructive">Failed to load credit profile</h2>
+        <p className="text-muted-foreground mt-2">Please check your connection and try again.</p>
+        <Button onClick={fetchCredit} className="mt-4">Retry</Button>
+      </div>
+    );
   }
 
   const radarData = [

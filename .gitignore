@@ -10,3 +10,11 @@ frontend/.env
 
 # General
 *.log
+.DS_Store
+**/.DS_Store
+*.zip
+**/*.zip
+*.pid
+**/*.pid
+*.diff
+**/*.diff

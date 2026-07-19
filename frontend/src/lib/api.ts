@@ -55,6 +55,24 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     }
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        if (typeof window !== 'undefined') {
+          const urlPath = typeof endpoint === 'string' ? endpoint : '';
+          if (
+            !urlPath.includes('/api/auth/login') && 
+            !urlPath.includes('/api/auth/signup') && 
+            !urlPath.includes('/api/auth/me') &&
+            !window.location.pathname.startsWith('/login') &&
+            !window.location.pathname.startsWith('/signup')
+          ) {
+            console.warn('Authentication failure (401/403) detected in API request. Logging out.');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user_role');
+            localStorage.removeItem('user_name');
+            window.location.href = '/login';
+          }
+        }
+      }
       const errorMsg = typeof responseBody === 'object' && responseBody !== null && responseBody.message 
         ? responseBody.message 
         : `HTTP error! Status: ${response.status}`;

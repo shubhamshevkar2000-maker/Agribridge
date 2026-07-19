@@ -111,7 +111,7 @@ export default function MarketplacePage() {
             <div>
               <h4 className="font-semibold text-sm mb-3">Crop Category</h4>
               <div className="space-y-2">
-                {['All', 'Vegetables', 'Fruits', 'Grains', 'Spices'].map(cat => (
+                {['All', 'Vegetables', 'Fruits', 'Grains', 'Spices', 'Fiber', 'Pulses/Oilseeds', 'Cash Crop'].map(cat => (
                   <label key={cat} className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground">
                     <Checkbox checked={category === cat} onCheckedChange={() => setCategory(cat)} /> {cat}
                   </label>

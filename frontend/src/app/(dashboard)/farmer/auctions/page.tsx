@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
-import { getCropImageUrl } from '@/utils/cropImages';
+import { CropImage } from '@/components/ui/crop-image';
 
 interface Crop {
   _id: string;
@@ -404,11 +404,10 @@ export default function FarmerAuctionsPage() {
                     <div>
                       {/* Premium crop image header */}
                       <div className="relative h-44 overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                        <img 
-                          src={auction.cropId?.images?.[0] || getCropImageUrl(auction.cropId?.name)} 
+                        <CropImage 
+                          images={auction.cropId?.images} 
                           alt={auction.cropId?.name || 'Crop'} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                          loading="lazy" 
                         />
                         <div className="absolute top-3 right-3">
                           <Badge className={`font-semibold border shadow-md ${getStatusColor(auction.status)}`}>

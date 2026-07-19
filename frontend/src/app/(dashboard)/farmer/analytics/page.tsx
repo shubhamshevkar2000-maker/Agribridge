@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api';
 
 interface AnalyticsData {
   totalRevenue: number;
@@ -33,24 +35,27 @@ interface AnalyticsData {
 export default function FarmerAnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
+
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const d = await api.get('/api/analytics/farmer');
+      if (d.success) {
+        setData(d.data);
+      } else {
+        setError(new Error('Failed to load analytics data'));
+      }
+    } catch (err) {
+      console.error('Error fetching farmer analytics:', err);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('/api/analytics/farmer', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const d = await res.json();
-        if (d.success) {
-          setData(d.data);
-        }
-      } catch (err) {
-        console.error('Error fetching farmer analytics:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAnalytics();
   }, []);
 
@@ -59,6 +64,16 @@ export default function FarmerAnalyticsPage() {
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
         <p className="text-muted-foreground mt-4 font-medium">Computing live analytics...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-center">
+        <h2 className="text-2xl font-bold text-destructive">Failed to load analytics</h2>
+        <p className="text-muted-foreground mt-2">Please check your connection and try again.</p>
+        <Button onClick={fetchAnalytics} className="mt-4">Retry</Button>
       </div>
     );
   }

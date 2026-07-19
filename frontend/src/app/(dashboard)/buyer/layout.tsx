@@ -202,7 +202,7 @@ export default function BuyerLayout({
         <DemoBanner />
 
         {/* Scrollable Main View */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative z-0">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative">
           {children}
         </main>
       </div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, Filter, MapPin, Star, ShieldCheck, Heart } from 'lucide-react';
-import { getCropImageUrl } from '@/utils/cropImages';
+import { CropImage } from '@/components/ui/crop-image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,7 +91,7 @@ export default function MarketplacePage() {
             <div>
               <h4 className="font-semibold text-sm mb-3">Crop Category</h4>
               <div className="space-y-2">
-                {['All', 'Vegetables', 'Fruits', 'Grains', 'Spices'].map(cat => (
+                {['All', 'Vegetables', 'Fruits', 'Grains', 'Spices', 'Fiber', 'Pulses/Oilseeds', 'Cash Crop'].map(cat => (
                   <label key={cat} className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground">
                     <Checkbox checked={category === cat} onCheckedChange={() => setCategory(cat)} /> {cat}
                   </label>
@@ -182,11 +182,10 @@ export default function MarketplacePage() {
                     <Link href={`/farmer/marketplace/${crop._id}`}>
                       <Card className="glass-card overflow-hidden border-border/50 hover:shadow-lg hover:border-primary/30 transition-all group h-full flex flex-col cursor-pointer">
                         <div className="relative h-48 overflow-hidden bg-muted flex items-center justify-center">
-                          <img 
-                            src={(crop.images && crop.images.length > 0 && !crop.images[0].includes('placehold.co')) ? crop.images[0] : getCropImageUrl(crop.name)} 
+                          <CropImage 
+                            images={crop.images} 
                             alt={crop.name} 
                             className="w-full h-full object-cover" 
-                            loading="lazy" 
                           />
                           <div className="absolute top-3 left-3 flex gap-2">
                             {crop.isOrganic && <Badge className="bg-primary/90 hover:bg-primary shadow-sm backdrop-blur-md">Organic</Badge>}

@@ -13,22 +13,15 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
-import { getCropImageUrl } from '@/utils/cropImages';
+import { CropImage } from '@/components/ui/crop-image';
 
-const fetcher = (url: string) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-  return fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then(res => res.json());
-};
+import { api } from '@/lib/api';
+
+const fetcher = (url: string) => api.get(url);
 
 const askKrishiSathi = async (prompt: string) => {
   try {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`/api/ai/insights`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ prompt, language: 'en' })
-    });
-    const data = await res.json();
+    const data = await api.post(`/api/ai/insights`, { prompt, language: 'en' });
     if (data.success) return data.data.response;
     return "Failed to get insights.";
   } catch (error) {
@@ -48,7 +41,7 @@ export default function FarmerDashboard() {
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   // Fetch Core Dashboard Data (SWR with auto-refresh every 30s)
-  const { data: dashboard, error: dashboardError, isLoading: dashboardLoading } = useSWR('/api/dashboard/farmer', fetcher, { refreshInterval: 30000 });
+  const { data: dashboard, error: dashboardError, isLoading: dashboardLoading, mutate: mutateDashboard } = useSWR('/api/dashboard/farmer', fetcher, { refreshInterval: 30000 });
   const { data: weather, isLoading: weatherLoading } = useSWR('/api/weather/farmer', fetcher, { refreshInterval: 3600000 });
 
   const handleSuggestPrice = async () => {
@@ -79,7 +72,7 @@ export default function FarmerDashboard() {
       <div className="flex flex-col items-center justify-center h-64 text-center">
         <h2 className="text-2xl font-bold text-destructive">Failed to load dashboard</h2>
         <p className="text-muted-foreground mt-2">Please check your connection and try again.</p>
-        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+        <Button onClick={() => mutateDashboard()} className="mt-4">Retry</Button>
       </div>
     );
   }
@@ -248,12 +241,13 @@ export default function FarmerDashboard() {
                 auctions.live.slice(0, 3).map((auction: any) => (
                   <div key={auction._id} className="flex justify-between items-center p-4 bg-secondary/30 rounded-xl mb-3 border border-border/50">
                     <div className="flex items-center gap-4">
-                      <img 
-                        src={auction.cropId?.images?.[0] || getCropImageUrl(auction.cropId?.name)} 
-                        alt={auction.cropId?.name || "Crop"} 
-                        className="w-12 h-12 rounded-lg object-cover"
-                        loading="lazy"
-                      />
+                      <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0">
+                        <CropImage 
+                          images={auction.cropId?.images} 
+                          alt={auction.cropId?.name || "Crop"} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                       <div>
                         <h4 className="font-semibold">{auction.cropId?.name || "Crop"}</h4>
                         <p className="text-sm text-muted-foreground">Ends in: {Math.max(0, Math.round((new Date(auction.endTime).getTime() - Date.now()) / 3600000))} hrs</p>
