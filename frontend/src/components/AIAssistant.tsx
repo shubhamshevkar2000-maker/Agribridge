@@ -42,7 +42,7 @@ const getAITranslations = (role: 'farmer' | 'buyer') => ({
       ? 'Namaste! I am KrishiSathi, your personal AI farming assistant. How can I help you today?'
       : 'Namaste! I am AgriSourcing AI, your personal assistant for sourcing crops and managing deliveries. How can I help you today?',
     suggestions: role === 'farmer' ? [
-      { label: 'Check Crop Prices', query: 'What is the price of Tomatoes in Nashik?', icon: TrendingUp },
+      { label: 'Check Crop Prices', query: 'I would like to check crop prices.', icon: TrendingUp },
       { label: 'Weather Forecast', query: 'Will it rain this week?', icon: ThermometerSun },
       { label: 'Pest Identification', query: 'My leaves have brown spots, what disease is it?', icon: Bug },
     ] : [
@@ -201,13 +201,14 @@ export function AIAssistant({ role }: { role: 'farmer' | 'buyer' }) {
       } else {
         throw new Error(data.message || 'Failed to get response');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Frontend AI Error:', error);
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         sender: 'ai',
-        text: language === 'en' ? "I'm having trouble connecting to the network right now. Please try again later." : 
-              language === 'hi' ? "मुझे अभी नेटवर्क से कनेक्ट करने में समस्या हो रही है। कृपया बाद में पुनः प्रयास करें।" :
-              "मला आत्ता नेटवर्कशी कनेक्ट करण्यात अडचण येत आहे. कृपया नंतर पुन्हा प्रयत्न करा.",
+        text: error.message || (language === 'en' ? "An unexpected error occurred." : 
+              language === 'hi' ? "एक अप्रत्याशित त्रुटि हुई।" :
+              "एक अनपेक्षित त्रुटी आली."),
         timestamp: new Date()
       }]);
     } finally {

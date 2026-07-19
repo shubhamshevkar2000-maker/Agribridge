@@ -58,22 +58,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser(data.data);
             localStorage.setItem('user_role', data.data.role);
             localStorage.setItem('user_name', data.data.name);
-          } else {
-            throw new Error('Invalid session');
+            setIsLoading(false);
+            return;
           }
-        } else {
-          throw new Error('Invalid session');
         }
+        
+        // If we reach here, session is invalid
+        console.warn('Session is invalid or expired.');
       } catch (err) {
         console.error('Failed to restore session:', err);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_role');
-        localStorage.removeItem('user_name');
-        setToken(null);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
       }
+      
+      // Cleanup for failed session
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_name');
+      setToken(null);
+      setUser(null);
+      setIsLoading(false);
     };
     
     initializeAuth();

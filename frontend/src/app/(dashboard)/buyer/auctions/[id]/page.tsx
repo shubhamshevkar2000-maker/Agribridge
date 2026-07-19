@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { CropImage } from '@/components/ui/crop-image';
+import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
 import Link from 'next/link';
 
 interface Bid {
@@ -264,7 +264,9 @@ export default function LiveAuctionPage({ params }: { params: Promise<{ id: stri
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-6">
                 <div className="w-full sm:w-48 h-48 rounded-2xl overflow-hidden bg-muted border border-border/40 shrink-0">
-                  <CropImage images={auction.cropId?.images} alt={auction.cropId?.name} />
+                  <img className="w-full h-full object-cover" 
+                  src={getValidImageUrl(auction.cropId?.images?.[0], auction.cropId?.name)} 
+                  alt={auction.cropId?.name || 'Crop'} />
                 </div>
                 
                 <div className="flex flex-col flex-1 justify-between">

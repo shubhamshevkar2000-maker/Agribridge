@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, Filter, MapPin, Star, ShieldCheck, Heart } from 'lucide-react';
-import { getCropImageUrl } from '@/utils/cropImages';
+import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -183,7 +183,7 @@ export default function MarketplacePage() {
                       <Card className="glass-card overflow-hidden border-border/50 hover:shadow-lg hover:border-primary/30 transition-all group h-full flex flex-col cursor-pointer">
                         <div className="relative h-48 overflow-hidden bg-muted flex items-center justify-center">
                           <img 
-                            src={(crop.images && crop.images.length > 0 && !crop.images[0].includes('placehold.co')) ? crop.images[0] : getCropImageUrl(crop.name)} 
+                            src={getValidImageUrl(crop.images?.[0], crop.name)} 
                             alt={crop.name} 
                             className="w-full h-full object-cover" 
                             loading="lazy" 

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
-import { getCropImageUrl } from '@/utils/cropImages';
+import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
 
 interface Crop {
   _id: string;
@@ -157,7 +157,15 @@ export default function FarmerAuctionsPage() {
           notes: notes || undefined
         })
       });
-      const data = await res.json();
+      
+      let data;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Server returned non-JSON response: ${res.statusText || 'Error'} (Status: ${res.status})`);
+      }
 
       if (data.success) {
         setIsFormOpen(false);
@@ -405,7 +413,7 @@ export default function FarmerAuctionsPage() {
                       {/* Premium crop image header */}
                       <div className="relative h-44 overflow-hidden bg-muted flex items-center justify-center shrink-0">
                         <img 
-                          src={auction.cropId?.images?.[0] || getCropImageUrl(auction.cropId?.name)} 
+                          src={getValidImageUrl(auction.cropId?.images?.[0], auction.cropId?.name)} 
                           alt={auction.cropId?.name || 'Crop'} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                           loading="lazy" 

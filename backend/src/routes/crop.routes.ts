@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { protect } from '../middlewares/auth.middleware';
 import { Crop } from '../models/Crop';
 import { User } from '../models/User';
-import cloudinary from '../config/cloudinary';
+import cloudinary, { safeUpload } from '../config/cloudinary';
 
 const router = Router();
 
@@ -94,18 +94,16 @@ router.post('/', protect, async (req: any, res) => {
 
     // Upload image to Cloudinary or use base64 fallback
     let imageUrl = req.body.image;
-    if (process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_KEY !== 'api_key') {
-      try {
-        console.log('Uploading crop image to Cloudinary...');
-        const uploadResult = await cloudinary.uploader.upload(req.body.image, {
-          folder: 'crops',
-          resource_type: 'auto'
-        });
-        imageUrl = uploadResult.secure_url;
-        console.log('Upload success:', imageUrl);
-      } catch (uploadError) {
-        console.error('Cloudinary upload failed, falling back to base64.', uploadError);
-      }
+    try {
+      console.log('Uploading crop image...');
+      const uploadResult = await safeUpload(req.body.image, {
+        folder: 'crops',
+        resource_type: 'auto'
+      });
+      imageUrl = uploadResult.secure_url;
+      console.log('Upload success:', imageUrl);
+    } catch (uploadError: any) {
+      console.error('Image upload failed, falling back to base64.', uploadError.message);
     }
 
     // Initial status determined by publish flag
@@ -201,20 +199,16 @@ router.put('/:id', protect, async (req: any, res) => {
         return res.status(400).json({ success: false, message: 'File size exceeds the 5 MB limit.' });
       }
 
-      if (process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_KEY !== 'api_key') {
-        try {
-          console.log('Uploading updated crop image to Cloudinary...');
-          const uploadResult = await cloudinary.uploader.upload(req.body.image, {
-            folder: 'crops',
-            resource_type: 'auto'
-          });
-          imageUrl = uploadResult.secure_url;
-          console.log('Upload success:', imageUrl);
-        } catch (uploadError) {
-          console.error('Cloudinary upload failed, using base64 instead.', uploadError);
-          imageUrl = req.body.image;
-        }
-      } else {
+      try {
+        console.log('Uploading updated crop image...');
+        const uploadResult = await safeUpload(req.body.image, {
+          folder: 'crops',
+          resource_type: 'auto'
+        });
+        imageUrl = uploadResult.secure_url;
+        console.log('Upload success:', imageUrl);
+      } catch (uploadError: any) {
+        console.error('Image upload failed, using base64 instead.', uploadError.message);
         imageUrl = req.body.image;
       }
     }

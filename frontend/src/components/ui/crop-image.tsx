@@ -9,7 +9,7 @@ interface CropImageProps {
 }
 
 export function CropImage({ images, alt = 'Crop Image', className = 'w-full h-full object-cover' }: CropImageProps) {
-  const src = (images && images.length > 0 && images[0] && !images[0].includes('placehold.co'))
+  const src = (images && images.length > 0 && images[0] && !images[0].includes('placehold.co') && (images[0].startsWith('http') || images[0].startsWith('data:')))
     ? images[0]
     : NO_IMAGE_PLACEHOLDER;
 

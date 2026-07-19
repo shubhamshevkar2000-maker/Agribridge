@@ -2,6 +2,7 @@ import Groq from 'groq-sdk';
 import { AiInteraction } from '../models/AiInteraction';
 import { User } from '../models/User';
 import { getWeatherData } from './weather.service';
+import { fetchMarketPrices } from './market.service';
 
 // Initialize Groq Client
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'mock-key-for-dev' });
@@ -20,6 +21,7 @@ export const getKrishiSathiHistory = async (userId: string) => {
 
 export const getKrishiSathiResponse = async (userId: string, prompt: string, language: string = 'en') => {
   try {
+    console.log('[DEBUG] getKrishiSathiResponse CALLED with prompt:', prompt);
     let responseText = '';
     
     // Fetch user location for weather context
@@ -55,13 +57,46 @@ export const getKrishiSathiResponse = async (userId: string, prompt: string, lan
       
       await new Promise(r => setTimeout(r, 1200));
     } else {
-      // Real Groq API Call - STRICT GROUNDING
+      // Fetch Market Data if requested
+      let marketContextStr = '';
+      const isPriceQuery = prompt.toLowerCase().includes('price') || prompt.toLowerCase().includes('rate') || prompt.toLowerCase().includes('market') || prompt.toLowerCase().includes('mandi');
+      
+      if (isPriceQuery) {
+        console.log('[AI Service] Price query detected. Fetching market data...');
+        const userLocation = user?.location?.city || user?.location?.district || undefined;
+        const marketData = await fetchMarketPrices(prompt, userLocation);
+        if (marketData) {
+          console.log('[AI Service] Market data retrieved successfully:', JSON.stringify(marketData));
+          marketContextStr = `
+LIVE MARKET DATA CONTEXT:
+Crop: ${marketData.crop}
+Location: ${marketData.location}
+Sources:
+${marketData.sources.map(s => `- ${s.name} (${s.location}): ₹${s.price}/${s.unit}`).join('\n')}
+Average Retail Price: ₹${marketData.averageRetailPrice}/${marketData.sources[0].unit}
+Estimated Wholesale/Farmer Price: ₹${marketData.estimatedWholesalePrice}/${marketData.sources[0].unit}
+
+INSTRUCTIONS FOR MARKET QUERY:
+Do NOT simply list the raw prices. Synthesize this data into a natural response. Mention the retail sources (Blinkit, Zepto, BigBasket) and average retail price. Then mention the estimated wholesale/farmer price. Explain briefly why retail prices are higher than farmer prices (transportation, storage, commissions). Finally, advise the user to verify exact wholesale rates with their nearest APMC or Agmarknet. 
+DO NOT output "Live market data is unavailable".`;
+        } else {
+          console.log('[AI Service] Market data fetch returned no results (unrecognized crop).');
+          marketContextStr = `
+LIVE MARKET DATA CONTEXT: 
+Data could not be retrieved for this crop/query.
+
+INSTRUCTIONS FOR MARKET QUERY:
+Since no specific crop was recognized in the user's query, do NOT say "Live market data is unavailable". Instead, politely ask the user: "Which crop would you like to check the price for?" and also ask for their city or district if it's not in their profile. If they did specify a crop but it's not a common one, provide a helpful general estimate based on recent historical trends, and advise them to verify today's exact price with their local APMC or eNAM.`;
+        }
+      }
+
+      // Real Groq API Call
       const systemInstruction = `You are KrishiSathi, an expert agricultural AI assistant for Indian farmers. 
 CRITICAL RULES:
 1. Respond concisely in ${language}.
-2. If the user asks about crop prices or market trends, you MUST state that live market data is currently unavailable and you CANNOT provide price estimates. DO NOT GUESS OR HALLUCINATE PRICES.
-3. If the user asks about the weather, ONLY use the following real weather data. DO NOT invent forecasts.
-${weatherContext ? weatherContext : 'No weather data provided. If asked about weather, state that you do not have weather data.'}`;
+2. If the user asks about the weather, ONLY use the following real weather data. DO NOT invent forecasts.
+${weatherContext ? weatherContext : 'No weather data provided. If asked about weather, state that you do not have weather data.'}
+${marketContextStr}`;
       
       // Fetch chat history for context
       const history = await getKrishiSathiHistory(userId);
@@ -72,11 +107,11 @@ ${weatherContext ? weatherContext : 'No weather data provided. If asked about we
       // Add last 5 interactions to history to avoid token limits
       const recentHistory = history.slice(-5);
       for (const interaction of recentHistory) {
-        if (interaction.inputText) {
-          messages.push({ role: 'user', content: interaction.inputText });
+        if (interaction.inputText && interaction.inputText.trim()) {
+          messages.push({ role: 'user', content: interaction.inputText.trim() });
         }
-        if (interaction.responseText) {
-          messages.push({ role: 'assistant', content: interaction.responseText });
+        if (interaction.responseText && interaction.responseText.trim()) {
+          messages.push({ role: 'assistant', content: interaction.responseText.trim() });
         }
       }
 
@@ -100,9 +135,9 @@ ${weatherContext ? weatherContext : 'No weather data provided. If asked about we
     });
 
     return responseText;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Groq API Error:', error);
-    throw new Error('Failed to fetch AI response');
+    throw new Error(error.message || 'Failed to fetch AI response');
   }
 };
 

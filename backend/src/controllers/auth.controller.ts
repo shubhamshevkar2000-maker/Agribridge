@@ -5,7 +5,7 @@ import { User } from '../models/User';
 import { KYC } from '../models/KYC';
 import { BankDetails } from '../models/BankDetails';
 import { generateToken } from '../utils/jwt';
-import cloudinary from '../config/cloudinary';
+import cloudinary, { safeUpload } from '../config/cloudinary';
 
 const signupSchema = z.object({
   name: z.string().min(2),
@@ -60,17 +60,10 @@ export const signup = async (req: Request, res: Response) => {
     let kycStatusValue: 'not_submitted' | 'pending' = 'not_submitted';
 
     if (validatedData.kycDocument) {
-      // Validate MIME type from base64 string
-      const mimeRegex = /^data:(image\/(png|jpg|jpeg)|application\/pdf);base64,/;
-      if (!mimeRegex.test(validatedData.kycDocument)) {
-        return res.status(400).json({ success: false, message: 'Invalid file type. Only PDF, JPG, and PNG are allowed.' });
-      }
-
       try {
-        console.log('Uploading KYC document to Cloudinary...');
-        const uploadResult = await cloudinary.uploader.upload(validatedData.kycDocument, {
-          folder: 'kyc_documents',
-          resource_type: 'auto'
+        const uploadResult = await safeUpload(validatedData.kycDocument, {
+          folder: 'kyc',
+          resource_type: 'auto',
         });
         kycUrl = uploadResult.secure_url;
         kycStatusValue = 'pending';
@@ -248,23 +241,19 @@ export const updateMe = async (req: any, res: Response) => {
 
       if (kyc.aadhaarNumber !== undefined) kycRecord.aadhaarNumber = kyc.aadhaarNumber;
 
-      const mimeRegex = /^data:(image\/(png|jpg|jpeg)|application\/pdf);base64,/;
-
-      if (kyc.aadhaarFront && mimeRegex.test(kyc.aadhaarFront)) {
-        console.log('Uploading Aadhaar Front to Cloudinary...');
-        const uploadResult = await cloudinary.uploader.upload(kyc.aadhaarFront, {
-          folder: 'kyc_documents',
-          resource_type: 'auto'
+      if (kyc.aadhaarFront) {
+        const uploadResult = await safeUpload(kyc.aadhaarFront, {
+          folder: 'kyc',
+          resource_type: 'auto',
         });
         kycRecord.aadhaarFront = uploadResult.secure_url;
         kycRecord.status = 'pending';
       }
 
-      if (kyc.aadhaarBack && mimeRegex.test(kyc.aadhaarBack)) {
-        console.log('Uploading Aadhaar Back to Cloudinary...');
-        const uploadResult = await cloudinary.uploader.upload(kyc.aadhaarBack, {
-          folder: 'kyc_documents',
-          resource_type: 'auto'
+      if (kyc.aadhaarBack) {
+        const uploadResult = await safeUpload(kyc.aadhaarBack, {
+          folder: 'kyc',
+          resource_type: 'auto',
         });
         kycRecord.aadhaarBack = uploadResult.secure_url;
         kycRecord.status = 'pending';

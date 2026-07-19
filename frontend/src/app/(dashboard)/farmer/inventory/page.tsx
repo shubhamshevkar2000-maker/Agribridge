@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { getCropImageUrl } from '@/utils/cropImages';
+import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
 
 interface Crop {
   _id: string;
@@ -574,7 +574,7 @@ export default function InventoryPage() {
                       <td className="px-6 py-4 font-medium text-foreground">
                         <div className="flex items-center gap-3">
                           <img 
-                            src={crop.images?.[0] || getCropImageUrl(crop.name)} 
+                            src={getValidImageUrl(crop.images?.[0], crop.name)} 
                             alt={crop.name} 
                             className="w-10 h-10 object-cover rounded-lg bg-muted shrink-0 border border-border/30" 
                             loading="lazy" 

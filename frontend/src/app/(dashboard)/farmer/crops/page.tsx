@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
-import { getCropImageUrl } from '@/utils/cropImages';
+import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
 
 interface Crop {
   _id: string;
@@ -349,7 +349,7 @@ export default function MyCropsPage() {
                 {/* Crop Image container */}
                 <div className="relative h-48 overflow-hidden bg-muted flex items-center justify-center shrink-0">
                   <img 
-                    src={crop.images?.[0] || getCropImageUrl(crop.name)} 
+                    src={getValidImageUrl(crop.images?.[0], crop.name)} 
                     alt={crop.name} 
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                     loading="lazy" 

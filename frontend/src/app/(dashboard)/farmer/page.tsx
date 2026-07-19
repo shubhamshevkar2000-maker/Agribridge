@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
-import { getCropImageUrl } from '@/utils/cropImages';
+import { getCropImageUrl, getValidImageUrl } from '@/utils/cropImages';
 
 const fetcher = (url: string) => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
@@ -249,7 +249,7 @@ export default function FarmerDashboard() {
                   <div key={auction._id} className="flex justify-between items-center p-4 bg-secondary/30 rounded-xl mb-3 border border-border/50">
                     <div className="flex items-center gap-4">
                       <img 
-                        src={auction.cropId?.images?.[0] || getCropImageUrl(auction.cropId?.name)} 
+                        src={getValidImageUrl(auction.cropId?.images?.[0], auction.cropId?.name)} 
                         alt={auction.cropId?.name || "Crop"} 
                         className="w-12 h-12 rounded-lg object-cover"
                         loading="lazy"
